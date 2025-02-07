@@ -21,8 +21,8 @@ global config;
 config.step_by_step = 0;
 
 %number of robot motions for each local map
-config.steps_per_map = 1000;
-config.n_maps = 4;
+config.steps_per_map = 100;
+config.n_maps = 10;
 
 % figure counter (to always plot a new figure)
 config.fig = 0;
@@ -401,7 +401,7 @@ figure(config.fig);
 axis([0 length(map.hat_x) -2*max(sqrt(diag(map.hat_P))) 2*max(sqrt(diag(map.hat_P)))]);
 grid on;
 hold on;
-plot(map.true_ids, map.hat_x-map.true_x, 'ro','Linewidth', 2);
+plot(map.true_ids, map.true_x-map.hat_x, 'ro','Linewidth', 2);
 plot(map.true_ids, 2*sqrt(diag(map.hat_P)), 'b+','Linewidth', 2);
 plot(map.true_ids, -2*sqrt(diag(map.hat_P)), 'b+','Linewidth', 2);
 xlabel('Feature number (robot = 0)');

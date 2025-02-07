@@ -21,11 +21,14 @@ global config;
 config.step_by_step = 0;
 
 %number of robot motions for each local map
-config.steps_per_map = 1000;
+config.steps_per_map = 100;
+config.n_maps = 10;
 
 % figure counter (to always plot a new figure)
 config.fig = 0;
 
+% Divide maps every k
+config.divide_every = 20;
 %-------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
@@ -103,8 +106,14 @@ global map;
 %-------------------------------------------------------------------------
 % BEGIN
 %-------------------------------------------------------------------------
+global local_map;
 
 [map] = Kalman_filter_slam (map, config.steps_per_map);
+
+for map_id = 2:config.n_maps
+    [local_map] = Kalman_filter_slam (local_map, config.steps_per_map);
+    [map] = merge_maps(map, local_map);
+end
 
 display_map_results (map);
 
@@ -167,9 +176,6 @@ for k = 0:steps
     if not(isempty(measurements.z_n))
         [map] = add_new_features (map, measurements);
     end
-
-    % divide map every k steps
-
     
     % record statistics
     map.stats.error_x = [map.stats.error_x; (map.stats.true_x(end) - map.hat_x(1))];
@@ -257,32 +263,32 @@ function[map] = update_map (map, measurements)
 
 global config;
 
-% % DO SOMETHING HERE!
-% % You need to compute H_k, y_k, S_k, K_k and update map.hat_x and map.hat_P
-% % Build the H matrix
-% % all_ids = [measurements.ids_f, measurements.ids_n];
-% all_ids = measurements.x_pos_f;
-% % Initialize the matrix with zeros
-% H_k = zeros(length(measurements.z_f), length(map.hat_x));
-% % Set the first column to -1
-% H_k(:, 1) = -1;
-% % Place 1s in the appropriate locations
-% % for i = 1:length(all_ids)
-% %     H_k(i, all_ids(i)) = 1; % Set the value at (i, indices(i)) to 1
-% % end
-% H_k(:, all_ids) = speye(length(all_ids));
-% % H_k = sparse(H_k);
-% 
-% % Apply Kalman filter update
-% z_k = measurements.z_f;
-% R_k = measurements.R_f;
-% % y_k = measurements.z_k-H_k*map.hat_x;
-% y_k = z_k-H_k*map.hat_x;
-% S_k = H_k*map.hat_P*H_k.' + R_k;
-% K_k = map.hat_P*H_k.'*inv(S_k);
-% 
-% map.hat_x = map.hat_x + K_k*y_k;
-% map.hat_P = (eye(length(K_k)) - K_k*H_k)*map.hat_P;
+% DO SOMETHING HERE!
+% You need to compute H_k, y_k, S_k, K_k and update map.hat_x and map.hat_P
+% Build the H matrix
+% all_ids = [measurements.ids_f, measurements.ids_n];
+all_ids = measurements.x_pos_f;
+% Initialize the matrix with zeros
+H_k = zeros(length(measurements.z_f), length(map.hat_x));
+% Set the first column to -1
+H_k(:, 1) = -1;
+% Place 1s in the appropriate locations
+% for i = 1:length(all_ids)
+%     H_k(i, all_ids(i)) = 1; % Set the value at (i, indices(i)) to 1
+% end
+H_k(:, all_ids) = speye(length(all_ids));
+% H_k = sparse(H_k);
+
+% Apply Kalman filter update
+z_k = measurements.z_f;
+R_k = measurements.R_f;
+% y_k = measurements.z_k-H_k*map.hat_x;
+y_k = z_k-H_k*map.hat_x;
+S_k = H_k*map.hat_P*H_k.' + R_k;
+K_k = map.hat_P*H_k.'*inv(S_k);
+
+map.hat_x = map.hat_x + K_k*y_k;
+map.hat_P = (eye(length(K_k)) - K_k*H_k)*map.hat_P;
 
 if config.step_by_step
     fprintf('Updape map for last %d features...\n',length(measurements.ids_f));
@@ -336,6 +342,92 @@ end
 end
 
 %-------------------------------------------------------------------------
+% merge_maps
+%-------------------------------------------------------------------------
+
+function [reference_map] = merge_maps (reference_map, local_map)
+
+reference_R0 = reference_map.R0;
+reference_true_x = reference_map.true_x;
+reference_n = reference_map.n;
+reference_hat_x = reference_map.hat_x;
+reference_hat_P = reference_map.hat_P;
+reference_true_ids = reference_map.true_ids;
+
+map_R0 = local_map.R0;
+map_true_x = local_map.true_x;
+map_n = local_map.n;
+map_hat_x = local_map.hat_x;
+map_hat_P = local_map.hat_P;
+map_true_ids = local_map.true_ids;
+
+n1 = length(reference_hat_x)-1;
+n2 = length(map_hat_x)-1;
+
+J1 = zeros(1+n1+n2, n1+1);
+J1(1,1)=1; J1(2:n1+1,2:end)=eye(n1); J1(n1+2:end,1)=1;
+J1 = sparse(J1);
+
+J2 = zeros(1+n1+n2, n2+1);
+J2(1,1)=1; J2(n1+2:end,2:end)=eye(n2);
+J2 = sparse(J2);
+
+% Update the reference map
+reference_map.R0 = reference_R0;
+reference_map.true_x = J1*reference_true_x+J2*map_true_x;
+reference_map.n = reference_n + map_n;
+reference_map.hat_x = J1*reference_hat_x+J2*map_hat_x;
+reference_map.hat_P = J1*reference_hat_P*J1.'+J2*map_hat_P*J2.';
+reference_map.true_ids = [reference_true_ids; map_true_ids(2:end)];
+
+% Update the stats
+reference_map.stats.true_x = [reference_map.stats.true_x; reference_true_x(1)+local_map.stats.true_x];
+reference_map.stats.error_x = [reference_map.stats.error_x; reference_map.stats.error_x(end)+local_map.stats.error_x];
+added_sigma = sqrt(reference_map.stats.sigma_x(end).^2 + local_map.stats.sigma_x.^2);
+reference_map.stats.sigma_x = [reference_map.stats.sigma_x; added_sigma];
+reference_map.stats.cost_t = [reference_map.stats.cost_t; local_map.stats.cost_t];
+
+% % Apply KF to both maps;
+[first_app, second_app] = separateRepeatedIndices(reference_map.true_ids);
+H = zeros(size(first_app, 1), size(reference_map.hat_x,1));
+% H(:, first_app) = 1;
+% H(:, second_app) = -1;
+row_ids = (1:size(H,1))';
+H(sub2ind(size(H), row_ids, first_app)) = 1;
+H(sub2ind(size(H), row_ids, second_app)) = -1;
+
+% Merged x_hat
+x_hat = reference_map.hat_x;
+P = reference_map.hat_P;
+K = P*H.'*inv(H*P*H.');
+x_hat_kf = x_hat- K*H*x_hat;
+P_kf = (eye(size(K,1))-K*H)*P;
+
+% Remove duplicated
+x_hat_kf(second_app)=[];
+P_kf(second_app,:)=[];
+P_kf(:,second_app)=[];
+reference_map.true_x(second_app)=[];
+reference_map.true_ids(second_app) = [];
+% reference_map.stats.true_x(second_app) = [];
+
+% Update the 
+reference_map.n = reference_map.n - size(first_app,1);
+reference_map.hat_x = x_hat_kf;
+reference_map.hat_P = P_kf;
+
+end
+
+function [first, second] = separateRepeatedIndices(A)
+    [C, ia, ic] = unique(A, 'first');
+    counts = full(sparse(ic, 1, 1));
+    repeated = find(counts >= 2);
+    mask = ismember(ic, repeated);
+    first = ia(repeated);
+    second = setdiff(find(mask), first);
+end
+
+%-------------------------------------------------------------------------
 % display_results
 %-------------------------------------------------------------------------
 
@@ -348,7 +440,7 @@ figure(config.fig);
 axis([0 length(map.hat_x) -2*max(sqrt(diag(map.hat_P))) 2*max(sqrt(diag(map.hat_P)))]);
 grid on;
 hold on;
-plot(map.true_ids, map.hat_x-map.true_x, 'ro','Linewidth', 2);
+plot(map.true_ids, map.true_x-map.hat_x, 'ro','Linewidth', 2);
 plot(map.true_ids, 2*sqrt(diag(map.hat_P)), 'b+','Linewidth', 2);
 plot(map.true_ids, -2*sqrt(diag(map.hat_P)), 'b+','Linewidth', 2);
 xlabel('Feature number (robot = 0)');
