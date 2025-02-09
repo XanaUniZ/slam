@@ -21,5 +21,22 @@ H = zeros(1, observations.m);
 %
 % compatibility.ic(i,j) = 1 if observation i is a neighbour of
 % feature j.
+
+for i = 1:observations.m
+    matched = false;
+    idx_neighbours_j = find(compatibility.ic (i,:));
+    if length(idx_neighbours_j) == 1
+        j = idx_neighbours_j(1);
+        idx_neighbours_i = find(compatibility.ic (:,j));
+        if length(idx_neighbours_j) == 1
+            H(i)=j;
+            matched = 1;
+        end 
+    end
+
+    if ~matched
+        H(i) = 0;
+    end
+end
             
 configuration.name = 'SINGLES';
