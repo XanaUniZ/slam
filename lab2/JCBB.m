@@ -25,6 +25,22 @@ if i > observations.m % leaf node?
     end
 else
     % complete JCBB here
+    for j = 1:prediction.n
+        ind_comp = compatibility.ic(i,j); 
+        if isempty(H)
+            joint_comp = joint_compatibility(H,i,j,prediction, observations, compatibility);
+        else
+            joint_comp = 1;
+        end
+        % joint_comp = smth(H,i,j); 
+        if ind_comp && joint_comp
+            JCBB_R(prediction, observations, compatibility, [H,j], i+1);
+        end
+    end
+
+    if pairings(H)+observations.m-i>pairings(Best.H)
+        JCBB([H, 0], i+1)
+    end
 end
 
 %-------------------------------------------------------
@@ -33,3 +49,19 @@ end
 function p = pairings(H)
 
 p = length(find(H));
+
+%-------------------------------------------------------
+% Joint Compatibility function
+%-------------------------------------------------------
+% function jc = joint_compatibility(H, i, j, prediction, observations, compatibility)
+%     H = [0, 2, 4, 1, 0, 5];
+%     P_H = H*prediction.P*H.T + observations.R(H);
+%     z_H = observations.z(H);
+%     h_H = prediction.h(H);
+%     % D_H = 
+% 
+%     if D_H <= chi2(2)
+%         jc = 1;
+%     else
+%         jc = 0;
+% end
