@@ -27,19 +27,22 @@ else
     % complete JCBB here
     for j = 1:prediction.n
         ind_comp = compatibility.ic(i,j); 
-        if isempty(H)
-            joint_comp = joint_compatibility(H,i,j,prediction, observations, compatibility);
+        if ~isempty(H)
+            %joint_comp = joint_compatibility(H,i,j,prediction, observations, compatibility);
+            H_temp = [H j];
+            [joint_comp, d2] = jointly_compatible(prediction, observations, H_temp);
         else
             joint_comp = 1;
         end
         % joint_comp = smth(H,i,j); 
         if ind_comp && joint_comp
-            JCBB_R(prediction, observations, compatibility, [H,j], i+1);
+            JCBB_R(prediction, observations, compatibility, [H j], i+1);
+
         end
     end
 
-    if pairings(H)+observations.m-i>pairings(Best.H)
-        JCBB([H, 0], i+1)
+    if pairings(H) + observations.m - i > pairings(Best.H)
+        JCBB_R(prediction, observations, compatibility, [H 0], i+1)
     end
 end
 

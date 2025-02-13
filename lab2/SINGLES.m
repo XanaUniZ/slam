@@ -28,7 +28,7 @@ for i = 1:observations.m
     if length(idx_neighbours_j) == 1
         j = idx_neighbours_j(1);
         idx_neighbours_i = find(compatibility.ic (:,j));
-        if length(idx_neighbours_j) == 1
+        if length(idx_neighbours_i) == 1
             H(i)=j;
             matched = 1;
         end 
