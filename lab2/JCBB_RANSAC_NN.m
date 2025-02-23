@@ -9,11 +9,11 @@ Best.H = zeros(1, observations.m);
 
 z = 0.01;
 w = 0.8;
-b = 4;
+b = 2;
 
 n_attempts = ceil(log(z)/log(1-w^b));
 
-fprintf("n_attempts = %d", n_attempts);
+fprintf("n_attempts = %d \n", n_attempts);
 
 for i=0:n_attempts
     % We should somehow shuffle the observations every attempt
@@ -63,14 +63,14 @@ H_nn = [];
 
 for i = ind:observations.m
     D2 = compatibility.d2 (perm_idx(i), :);
-    [D2_sorted, idx_near] = sort(D2, 'descend');
+    [D2_sorted, idx_near] = sort(D2, 'ascend');
 
     found = false;
     for nearest = 1:length(idx_near)
         if D2_sorted(nearest) <= chi2(2)
-            H_temp = [H idx_near(nearest)];
+            H_temp = [H zeros(1,i-ind) idx_near(nearest)];
             if jointly_compatible_idx(prediction, observations, H_temp, perm_idx)
-                H_nn = H_temp;
+                H_nn = [H_nn idx_near(nearest)];
                 found = true;
                 break;
             end
@@ -84,6 +84,7 @@ for i = ind:observations.m
     if ~found
         H_nn = [H_nn 0];
     end
+    % H_nn
 end
 
 H = [H H_nn];

@@ -6,7 +6,7 @@ function [ground, people] = generate_cloister_experiment,
 % Generate experiment
 %-------------------------------------------------------
 
-s = 1;
+s = 2;
 p = [];
 l1 = 10; w = -1.2; d = 0; p = [p genpoints(l1, s, w, d)];
 l1 = 10; w = -0.7; d = 0; p = [p genpoints(l1, s, w, d)];

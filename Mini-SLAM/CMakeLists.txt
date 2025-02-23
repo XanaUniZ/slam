@@ -24,6 +24,10 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/OpenCV/build")
   set(OpenCV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/OpenCV/build")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/Pangolin/build")
+  set(Pangolin_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/Pangolin/build")
+endif()
+
 add_subdirectory(Lab0)
 add_subdirectory(Modules)
 add_subdirectory(Apps)
