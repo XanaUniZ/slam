@@ -13,6 +13,8 @@ b = 4;
 
 n_attempts = ceil(log(z)/log(1-w^b));
 
+fprintf("n_attempts = %d", n_attempts);
+
 for i=0:n_attempts
     % We should somehow shuffle the observations every attempt
     % or find some way to pick a subset

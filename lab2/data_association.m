@@ -1,5 +1,5 @@
 %-------------------------------------------------------
-function [H, GT, compatibility] = data_association(map, observations, step),
+function [H, GT, compatibility, time] = data_association(map, observations, step),
 %-------------------------------------------------------
 global configuration ground;
 
@@ -19,11 +19,13 @@ disp(['GROUND  TRUTH: ' sprintf('%2d  ', GT)]);
 % 5. Try JCBB without odometry
 % 6. Eliminate features included in the map two steps ago, and never seen again
 
+tic
 % H = NN (prediction, observations, compatibility);
 % H = SINGLES (prediction, observations, compatibility);
 % H = JCBB (prediction, observations, compatibility);
 % H = JCBB_RANSAC (prediction, observations, compatibility);
 H = JCBB_RANSAC_NN (prediction, observations, compatibility);
+time = toc;
 
 disp(['MY HYPOTHESIS: ' sprintf('%2d  ', H)]);
 disp(['Correct (1/0)? ' sprintf('%2d  ', GT == H)]);

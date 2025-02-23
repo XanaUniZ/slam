@@ -6,8 +6,8 @@
 %-------------------------------------------------------
 clear all;
 close all;
-randn('state', 0);
-rand('state', 0);
+randn('state', 42);
+rand('state', 42);
 addpath 'tools';
 
 % determines execution and display modes
@@ -20,7 +20,7 @@ configuration.odometry = 1;
 configuration.noise = 1;
 configuration.alpha = 0.99; % only useful is chi2inv is available
 configuration.step_by_step = 0;
-configuration.people = 1;
+configuration.people = 0;
 configuration.ekf_iterations = 4;
 configuration.maintenance = 1;
 
@@ -150,6 +150,7 @@ configuration.name = '';
 draw_map (map, ground, step);
 
 steps = length(ground.motion);
+times = zeros(1,steps-1);
 for step = 2 : steps,
     
     disp('--------------------------------------------------------------');
@@ -161,8 +162,10 @@ for step = 2 : steps,
     % sense
     observations = get_observations(ground, sensor, step);
     
-    %data association
-    [H, GT, compatibility] = data_association(map, observations, step);
+    %data association 
+    [H, GT, compatibility, t] = data_association(map, observations, step);
+    times(step)= t;
+    times(step)
     
     % update EKF step
     map = EKF_update (map, observations, H);
@@ -183,5 +186,8 @@ for step = 2 : steps,
     draw_map (map, ground, step);
     results = store_results(results, observations, GT, H);
 end
+
+fprintf("Mean   Time DA = %f \n", mean(times))
+fprintf("Median Time DA = %f \n", median(times))
 
 show_results(map, ground, results);
