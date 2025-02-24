@@ -23,7 +23,6 @@ tic
 % H = NN (prediction, observations, compatibility);
 % H = SINGLES (prediction, observations, compatibility);
 % H = JCBB (prediction, observations, compatibility);
-% H = JCBB_RANSAC (prediction, observations, compatibility);
 H = JCBB_RANSAC_NN (prediction, observations, compatibility);
 time = toc;
 

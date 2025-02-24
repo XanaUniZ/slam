@@ -84,7 +84,6 @@ for i = ind:observations.m
     if ~found
         H_nn = [H_nn 0];
     end
-    % H_nn
 end
 
 H = [H H_nn];
