@@ -50,7 +50,7 @@ int searchForInitializaion(Frame& refFrame, Frame& currFrame, int th, vector<int
     cv::Mat currDesc = currFrame.getDescriptors();
 
     int nMatches = 0;
-    const int minOctave = 0, maxOctave = 0;
+    const int minOctave = 0, maxOctave = 0; //Only search matches in the original image
     for(size_t i = 0; i < vRefKeys.size(); i++){
         //Only search matches with KeyPoints in the finest scale
         if(vRefKeys[i].octave > maxOctave){
@@ -60,6 +60,36 @@ int searchForInitializaion(Frame& refFrame, Frame& currFrame, int th, vector<int
         /*
          * Your code for Lab 3 - Task 1 here!
          */
+
+        // keypoint in the reference frame
+        cv::Point2f refkp = vRefKeys[i].pt;
+        
+        //Clear previous matches
+        vIndicesToCheck.clear();
+
+        float radius = 15 * refFrame.getScaleFactor(vRefKeys[i].octave);
+        currFrame.getFeaturesInArea(refkp.x,refkp.y,radius,minOctave,maxOctave,vIndicesToCheck);
+
+        //Match with the one with the smallest Hamming distance
+        int bestDist = 255, secondBestDist = 255;
+        size_t bestIdx;
+        for(auto j : vIndicesToCheck){
+            
+            int dist = HammingDistance(refDesc.row(i),currDesc.row(j));
+
+            if(dist < bestDist){
+                secondBestDist = bestDist;
+                bestDist = dist;
+                bestIdx = j;
+            }
+            else if(dist < secondBestDist){
+                secondBestDist = dist;
+            }
+        }
+        if(bestDist <= th && (float)bestDist < (float(secondBestDist)*0.9)){
+            vMatches[i] = bestIdx;
+            nMatches++;
+        }
     }
 
     for(size_t i = 0; i < vMatches.size(); i++){
@@ -68,6 +98,15 @@ int searchForInitializaion(Frame& refFrame, Frame& currFrame, int th, vector<int
         }
     }
 
+    // //Visualize matches
+    // for(size_t i = 0; i < vMatches.size(); i++){
+    //     if(vMatches[i] != -1){
+    //         cv::line(refFrame.getImage(),vRefKeys[i].pt,vPrevMatched[i],cv::Scalar(0,255,0));
+    //         cv::line(currFrame.getImage(),vPrevMatched[i],currFrame.getKeyPoint(vMatches[i]).pt,cv::Scalar(0,255,0));
+    //     }
+    // }
+
+    
     return nMatches;
 }
 
