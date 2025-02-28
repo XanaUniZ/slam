@@ -208,16 +208,49 @@ int searchWithProjection(Frame& currFrame, int th, std::vector<std::shared_ptr<M
         cv::Point2f uv = currCalibration->project(p3Dc);
 
         float radius = currFrame.getScaleFactor(predictedOctave);
-        if(viewCos>0.998)
-            radius *= 2.5;
-        else
-            radius *= 4.0;
+        // if(viewCos>0.998)
+        //     radius *= 2.5;
+        // else
+        //     radius *= 4.0;
+        radius *= 15;
 
         /*
          * Your matching code for Lab 3 - Task 4 goes here
          */
-    }
+        predictedOctave = std::min(predictedOctave, currFrame.getNumberOfScales()-1);
+        int minOctave = std::max(0, predictedOctave-1);
+        int maxOctave = std::min(currFrame.getNumberOfScales()-1, predictedOctave+1);
+        currFrame.getFeaturesInArea(uv.x, uv.y, radius, minOctave, maxOctave, vIndicesToCheck);
 
+        cv::Mat desc = pMP->getDescriptor();
+
+        //Match with the one with the smallest Hamming distance
+        int bestDist = 255, secondBestDist = 255;
+        size_t bestIdx;
+        for(auto j : vIndicesToCheck){
+            if(currFrame.getMapPoint(j)){
+                continue;
+            }
+
+            int ham_dist = HammingDistance(desc.row(0),currFrame.getDescriptors().row(j));
+
+            if(ham_dist < bestDist){
+                secondBestDist = bestDist;
+                bestDist = ham_dist;
+                bestIdx = j;
+            }
+            else if(ham_dist < secondBestDist){
+                secondBestDist = ham_dist;
+            }
+        }
+        
+        if(bestDist <= th && (float)bestDist < (float(secondBestDist)*0.9)){
+            currFrame.setMapPoint(bestIdx,pMP);
+            nMatches++;
+        }
+    }
+    std::cout << "vMapPoints.size(): " << vMapPoints.size() << std::endl;
+    std::cout << "Matches with Projection: " << nMatches << std::endl;
     return nMatches;
 }
 
