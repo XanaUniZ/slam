@@ -182,7 +182,8 @@ bool Tracking::monocularMapInitialization() {
     //Find matches between previous and current frame
     int nMatches = searchForInitializaion(prevFrame_,currFrame_,settings_.getMatchingInitTh(),vMatches_,vPrevMatched_);
 
-    //visualizer_->drawFrameMatches(currFrame_.getKeyPointsDistorted(),currIm_,vMatches_);
+    visualizer_->drawFrameMatches(currFrame_.getKeyPointsDistorted(),currIm_,vMatches_);
+    cv::waitKey(0);
 
     //If not enough matches found, updtate reference frame
     if(nMatches < 70){
@@ -258,7 +259,9 @@ bool Tracking::monocularMapInitialization() {
     }
 
     //Run a Bundle Adjustment to refine the solution
+    // std::cout << "Before BA" << std::endl;
     bundleAdjustment(pMap_.get());
+    // std::cout << "After BA" << std::endl;
 
     Tcw = kf1->getPose();
     currFrame_.setPose(Tcw);
