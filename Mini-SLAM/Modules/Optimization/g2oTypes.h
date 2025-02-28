@@ -78,6 +78,8 @@ public:
          * Your code for Lab 3 - Task 3 here! Example:
          * _error = Eigen::Vector2d::Ones()*100;
          */
+        Eigen::Vector3d projectedPoint = Tcw*p3Dw;
+         _error = (obs - pCamera->project(projectedPoint));
     }
 
     bool isDepthPositive() {
@@ -110,6 +112,8 @@ public:
         * Your code for Lab 3 - Task 3 here! Example:
         * _error = Eigen::Vector2d::Ones()*100;
         */
+        Eigen::Vector3d projectedPoint = Tcw*Xworld;
+        _error = (obs - pCamera->project(projectedPoint));
     }
 
     bool isDepthPositive() {
