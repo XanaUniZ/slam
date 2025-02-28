@@ -98,15 +98,7 @@ int searchForInitializaion(Frame& refFrame, Frame& currFrame, int th, vector<int
         }
     }
 
-    // //Visualize matches
-    // for(size_t i = 0; i < vMatches.size(); i++){
-    //     if(vMatches[i] != -1){
-    //         cv::line(refFrame.getImage(),vRefKeys[i].pt,vPrevMatched[i],cv::Scalar(0,255,0));
-    //         cv::line(currFrame.getImage(),vPrevMatched[i],currFrame.getKeyPoint(vMatches[i]).pt,cv::Scalar(0,255,0));
-    //     }
-    // }
-
-    
+    std::cout << "Number of matches: " << nMatches << std::endl;
     return nMatches;
 }
 
