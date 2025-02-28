@@ -1,2 +1,6 @@
 *.png
 trajectory.txt
+.vscode*
+Datasets*
+venv*
+*__pycache__*
