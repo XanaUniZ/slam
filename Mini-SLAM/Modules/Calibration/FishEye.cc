@@ -62,13 +62,60 @@ void FishEye::projectJac(const Eigen::Vector3f& p3D, Eigen::Matrix<float,2,3>& J
      * Your code for Lab 3 - Task 5 here!
      */
 
-    Jac(0,0) = fx / p3D(2);
-    Jac(0,1) = 0.f;
-    Jac(0,2) = -fx * p3D(0) / (p3D(2) * p3D(2));
+    // Jac(0,0) = fx / p3D(2);
+    // Jac(0,1) = 0.f;
+    // Jac(0,2) = -fx * p3D(0) / (p3D(2) * p3D(2));
 
-    Jac(1,0) = 0.f;
-    Jac(1,1) = fy / p3D(2);
-    Jac(1,2) = -fy * p3D(1) / (p3D(2) * p3D(2));
+    // Jac(1,0) = 0.f;
+    // Jac(1,1) = fy / p3D(2);
+    // Jac(1,2) = -fy * p3D(1) / (p3D(2) * p3D(2));
+
+    float x =p3D(0);
+    float y =p3D(1);
+    float z =p3D(2);
+    float r = sqrt(p3D.x()*p3D.x() + p3D.y()*p3D.y());
+    float sq_sum = (x*x + z*z + y*y);
+    float theta = atan(r/p3D.z());
+    float theta3 = theta*theta*theta;
+    float theta5 = theta3*theta*theta;
+    float theta7 = theta5*theta*theta;
+    float theta9 = theta7*theta*theta;
+    float d = theta + k1*theta3 + k2*theta5 + k3*theta7 + k4*theta9; 
+
+    // Partial d_theta theta
+    float theta2 = theta*theta;
+    float theta4 = theta2*theta*theta;
+    float theta6 = theta4*theta*theta;
+    float theta8 = theta6*theta*theta;
+    float partial_d_theta_theta = 1 + 3*k1*theta2 + 5*k2*theta4 + 7*k3*theta6 + 9*k4*theta8;
+
+    // Partial theta
+    float patial_theta_x = (z*x)/(r*sq_sum);
+    float patial_theta_y = (z*y)/(r*sq_sum);
+    float patial_theta_z = -r/sq_sum;
+
+    // Partial d_theta xyz
+    float partial_d_theta_x = partial_d_theta_theta * patial_theta_x;
+    float partial_d_theta_y = partial_d_theta_theta * patial_theta_y;
+    float partial_d_theta_z = partial_d_theta_theta * patial_theta_z;
+
+    // Partial u xyz
+    float partial_u_x = partial_d_theta_x * fx * (x/r) + d*(fx*y*y)/std::pow(r, 3/2);
+    float partial_u_y = partial_d_theta_y * fx * (x/r) - d*(2*fx*x*y)/std::pow(r, 3/2);
+    float partial_u_z = partial_d_theta_z * fx * (x/r);
+
+    // Partial v xyz
+    float partial_v_x = partial_d_theta_x * fy * (y/r) - d*(2*fy*x*y)/std::pow(r, 3/2);
+    float partial_v_y = partial_d_theta_y * fy * (y/r) + d*(fx*x*x)/std::pow(r, 3/2);
+    float partial_v_z = partial_d_theta_z * fy * (y/r);
+
+    Jac(0,0) = partial_u_x;
+    Jac(0,1) = partial_u_y;
+    Jac(0,2) = partial_u_z;
+
+    Jac(1,0) = partial_v_x;
+    Jac(1,1) = partial_v_y;
+    Jac(1,2) = partial_v_z;
 
 }
 
