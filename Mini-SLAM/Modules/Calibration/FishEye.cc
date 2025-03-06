@@ -62,7 +62,15 @@ void FishEye::projectJac(const Eigen::Vector3f& p3D, Eigen::Matrix<float,2,3>& J
      * Your code for Lab 3 - Task 5 here!
      */
 
-    Jac(0,0) = fx / p3D(2);
+    float denom1 = std::sqrt(p3D(0) * p3D(0) + p3D(1) * p3D(1));
+    float denom2 = p3D(0) * p3D(0) + p3D(2) * p3D(2) + p3D(1) * p3D(1);
+    float partial_theta_x = (p3D(2) * p3D(0)) / (denom1 * denom2);
+    float partial_theta_y = (p3D(2) * p3D(1)) / (denom1 * denom2);
+    float partial_theta_z = - denom1 / denom2;
+
+    float d = theta + k1*theta3 + k2*theta5 + k3*theta7 + k4*theta9; 
+ 
+    Jac(0,0) = ;
     Jac(0,1) = 0.f;
     Jac(0,2) = -fx * p3D(0) / (p3D(2) * p3D(2));
 
