@@ -16,8 +16,10 @@ set(root ${CMAKE_CURRENT_SOURCE_DIR})
 set(HEADER_FILES
         ${root}/Calibration/CameraModel.h
         ${root}/Calibration/PinHole.h
+        ${root}/Calibration/FishEye.h
         ${root}/DatasetLoader/EurocVisualLoader.h
         ${root}/DatasetLoader/TUMRGBDLoader.h
+        ${root}/DatasetLoader/TUMVILoader.h
         ${root}/Features/Descriptor.h
         ${root}/Features/Feature.h
         ${root}/Features/FAST.h
@@ -40,8 +42,10 @@ set(HEADER_FILES
 
 set(SOURCE_FILES
         ${root}/Calibration/PinHole.cc
+        ${root}/Calibration/FishEye.cc
         ${root}/DatasetLoader/EurocVisualLoader.cc
         ${root}/DatasetLoader/TUMRGBDLoader.cc
+        ${root}/DatasetLoader/TUMVILoader.cc
         ${root}/Features/FAST.cc
         ${root}/Features/ORB.cc
         ${root}/Map/KeyFrame.cc

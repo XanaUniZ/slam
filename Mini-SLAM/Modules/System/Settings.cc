@@ -16,6 +16,7 @@
 */
 
 #include "Calibration/PinHole.h"
+#include "Calibration/FishEye.h"
 
 #include "Settings.h"
 
@@ -38,24 +39,37 @@ Settings::Settings(const std::string& configFile) {
     float fy = fSettings["Camera.fy"];
     float cx = fSettings["Camera.cx"];
     float cy = fSettings["Camera.cy"];
-    vector<float> vCalibration = {fx,fy,cx,cy};
 
-    calibration_ = shared_ptr<CameraModel>(new PinHole(vCalibration));
+    std::cout << configFile << std::endl;
+    if (configFile.find("TUM-VI") == std::string::npos){
+        // std::cout << "Pinhole" << std::endl;
+        vector<float> vCalibration = {fx,fy,cx,cy};
+        calibration_ = shared_ptr<CameraModel>(new PinHole(vCalibration));
 
-    //Read (if exists) distortion parameters
-    if(!fSettings["Camera.k1"].empty()){
-        if(!fSettings["Camera.k3"].empty()){
-            vDistortion_.resize(5);
-            vDistortion_[4] = fSettings["Camera.k3"];
+        //Read (if exists) distortion parameters
+        if(!fSettings["Camera.k1"].empty()){
+            if(!fSettings["Camera.k3"].empty()){
+                vDistortion_.resize(5);
+                vDistortion_[4] = fSettings["Camera.k3"];
+            }
+            else{
+                vDistortion_.resize(4);
+            }
+
+            vDistortion_[0] = fSettings["Camera.k1"];
+            vDistortion_[1] = fSettings["Camera.k2"];
+            vDistortion_[2] = fSettings["Camera.p1"];
+            vDistortion_[3] = fSettings["Camera.p2"];
         }
-        else{
-            vDistortion_.resize(4);
-        }
-
-        vDistortion_[0] = fSettings["Camera.k1"];
-        vDistortion_[1] = fSettings["Camera.k2"];
-        vDistortion_[2] = fSettings["Camera.p1"];
-        vDistortion_[3] = fSettings["Camera.p2"];
+    }
+    else{
+        // std::cout << "Fisheye" << std::endl;
+        float k0 = fSettings["Camera.k0"];
+        float k1 = fSettings["Camera.k1"];
+        float k2 = fSettings["Camera.k2"];
+        float k3 = fSettings["Camera.k3"];
+        vector<float> vCalibration = {fx,fy,cx,cy,k0,k1,k2,k3};
+        calibration_ = shared_ptr<CameraModel>(new FishEye(vCalibration));
     }
 
     //Read image dimensions

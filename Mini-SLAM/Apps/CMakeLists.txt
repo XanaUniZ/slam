@@ -19,3 +19,7 @@ target_link_libraries(${PROGRAM_NAME} ${OpenCV_LIBS} mini_slam)
 set(PROGRAM_NAME mono_tumrgbd)
 add_executable(${PROGRAM_NAME} mono_tumrgbd.cc)
 target_link_libraries(${PROGRAM_NAME} ${OpenCV_LIBS} mini_slam)
+
+set(PROGRAM_NAME mono_tumvi)
+add_executable(${PROGRAM_NAME} mono_tumvi.cc)
+target_link_libraries(${PROGRAM_NAME} ${OpenCV_LIBS} mini_slam)

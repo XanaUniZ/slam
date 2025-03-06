@@ -74,6 +74,10 @@ cv::Mat MiniSLAM::convertImageToGrayScale(const cv::Mat &im) {
 
     if(im.type() == CV_8U)
         grayScaled = im;
+    else if (im.type() == CV_16U) {
+        grayScaled = im.clone();
+        grayScaled.convertTo(grayScaled, CV_8U, 1.0 / 256.0);
+    }
     else if(im.channels()==3){
         cvtColor(im,grayScaled,cv::COLOR_RGB2GRAY);
     }

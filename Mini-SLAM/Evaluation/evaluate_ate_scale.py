@@ -87,7 +87,7 @@ def align(model,data):
     s = float(dots/norms)    
 
     #print "scale: %f " % s  
-    print(s, "," , sep="", end="")
+    # print(s, "," , sep="", end="")
 
     trans = data.mean(1) - s*rot * model.mean(1)
     
@@ -190,7 +190,8 @@ if __name__=="__main__":
             numpy.max(trans_error), sep="")
 
     else:
-        print(numpy.sqrt(numpy.dot(trans_error,trans_error) / len(trans_error)))
+        print("RMS ATE (mm): ", numpy.sqrt(numpy.dot(trans_error,trans_error) / len(trans_error)))
+        print("Trajectory Length: ",  len(second_list))
         #print "%f"%numpy.sqrt(numpy.dot(trans_error,trans_error) / len(trans_error))
         
     if args.save_associations:

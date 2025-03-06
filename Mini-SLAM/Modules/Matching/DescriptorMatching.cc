@@ -249,8 +249,8 @@ int searchWithProjection(Frame& currFrame, int th, std::vector<std::shared_ptr<M
             nMatches++;
         }
     }
-    std::cout << "vMapPoints.size(): " << vMapPoints.size() << std::endl;
-    std::cout << "Matches with Projection: " << nMatches << std::endl;
+    // std::cout << "vMapPoints.size(): " << vMapPoints.size() << std::endl;
+    // std::cout << "Matches with Projection: " << nMatches << std::endl;
     return nMatches;
 }
 
