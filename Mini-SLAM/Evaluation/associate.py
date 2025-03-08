@@ -84,6 +84,7 @@ def associate(first_list, second_list,offset,max_difference):
     
     """
     first_keys = list(first_list.keys())
+    print("GT Trajectory Length: ", len(first_keys))
     second_keys = list(second_list.keys())
     potential_matches = [(abs(a - (b + offset)), a, b) 
                          for a in first_keys 

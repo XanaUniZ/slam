@@ -41,7 +41,7 @@ int main(int argc, char **argv){
     string datasetPath = argv[1];
     string timestampsFile = argv[2];
     std::cout << "Before Loader" << std::endl;
-    TUMVILoader sequence(datasetPath, timestampsFile, datasetPath + "/mav0/mocap0/data.csv");
+    TUMVILoader sequence(datasetPath, timestampsFile, datasetPath + "/mav0/imu0/data.csv");
     // std::cout << "After Loader" << std::endl;
     //Create SLAM system
     MiniSLAM SLAM("Data/TUM-VI.yaml");
@@ -65,7 +65,7 @@ int main(int argc, char **argv){
         if(SLAM.processImage(currIm, Tcw)){
             Sophus::SE3f Twc = Tcw.inverse();
             //Save predicted pose to the file
-            trajectoryFile << setprecision(19) << currTs*1e9 << "," << setprecision(7) << Twc.translation()(0) << ",";
+            trajectoryFile << setprecision(17) << currTs << "," << setprecision(7) << Twc.translation()(0) << ",";
             trajectoryFile << Twc.translation()(1) << "," << Twc.translation()(2) << ",";
             trajectoryFile << Twc.unit_quaternion().x() << "," << Twc.unit_quaternion().y() << ",";
             trajectoryFile << Twc.unit_quaternion().z() << "," << Twc.unit_quaternion().w() << endl;

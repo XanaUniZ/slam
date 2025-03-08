@@ -80,7 +80,6 @@ public:
          */
         Eigen::Vector3d projectedPoint = Tcw*p3Dw;
          _error = (obs - pCamera->project(projectedPoint));
-         std::cout << "Mean Repr Error: " << _error.cwiseAbs().mean() << std::endl;
     }
 
     bool isDepthPositive() {
