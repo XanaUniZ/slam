@@ -182,8 +182,8 @@ bool Tracking::monocularMapInitialization() {
     //Find matches between previous and current frame
     int nMatches = searchForInitializaion(prevFrame_,currFrame_,settings_.getMatchingInitTh(),vMatches_,vPrevMatched_);
 
-    visualizer_->drawFrameMatches(currFrame_.getKeyPointsDistorted(),currIm_,vMatches_);
-    cv::waitKey(0);
+    // visualizer_->drawFrameMatches(currFrame_.getKeyPointsDistorted(),currIm_,vMatches_);
+    // cv::waitKey(0);
 
     //If not enough matches found, updtate reference frame
     if(nMatches < 70){
@@ -359,6 +359,16 @@ bool Tracking::needNewKeyFrame() {
     /*
      * Your code for Lab 4 - Task 1 here!
      */
+    int max_frames_between_KF = 100;
+    int min_feat_tracked = 50;
+    nFramesFromLastKF_ += 1;
+
+    std::cout << "nFeatTracked_:\t" << nFeatTracked_ << std::endl;
+    std::cout << "nFramesFromLastKF_:\t" << nFramesFromLastKF_ << std::endl;
+    if ((nFeatTracked_  < min_feat_tracked) ||
+    (nFramesFromLastKF_ > max_frames_between_KF)){
+        return true;
+    }
 
     return false;
 }
