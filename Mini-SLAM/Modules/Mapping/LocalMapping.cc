@@ -105,6 +105,59 @@ void LocalMapping::triangulateNewMapPoints() {
                  * Your code for Lab 4 - Task 2 here!
                  * Note that the last KeyFrame inserted is stored at this->currKeyFrame_
                  */
+                float min_reprError = 5.991;
+                float minParallaxCos = 0.9998; // From YAML files
+
+                // 1. Get the matched keypoints in each keyframe
+                int idxMatch = vMatches[i];
+                const cv::KeyPoint& kp1 = currKeyFrame_->getKeyPoint(i);
+                const cv::KeyPoint& kp2 = pKF->getKeyPoint(idxMatch);
+
+                // 2. Convert pixel coordinates to normalized rays using each camera’s calibration
+                Eigen::Vector3f ray1 = calibration1->unproject(kp1.pt.x, kp1.pt.y);
+                shared_ptr<CameraModel> calibration2 = pKF->getCalibration();
+                Eigen::Vector3f ray2 = calibration2->unproject(kp2.pt.x, kp2.pt.y);
+                
+                // 3. Triangulate the 3D point in world coordinates
+                Eigen::Vector3f p3D, p3D_c1, p3D_c2;
+                triangulate(ray1, ray2, T1w, T2w, p3D);
+                p3D_c1 = T1w * p3D;
+                p3D_c2 = T2w * p3D;
+
+                //Check that the point has been triangulated in front of the cameras (possitive depth)
+                if((p3D_c1(2) < 0.0f) || (p3D_c2(2) < 0.0f)){
+                    continue; // Point behind at least one camera
+                }
+
+                // 5. Check reprojection error in each keyframe:
+                cv::Point2f uv1 = calibration1->project(p3D_c1);
+                cv::Point2f uv2 = calibration2->project(p3D_c2);
+                cv::Point2f kp1Copy = kp1.pt;
+                cv::Point2f kp2Copy = kp1.pt;
+                float repError_c1 = squaredReprojectionError(kp1Copy,uv1) > 5.991;
+                float repError_c2 = squaredReprojectionError(kp2Copy,uv2) > 5.991;
+                if((repError_c1 > min_reprError) || (repError_c2 > min_reprError))
+                {
+                    continue;  // Reprojection error too large
+                }
+
+                // 6. Check the parallax of the triangulated point
+                Eigen::Vector3f normal1 = p3D_c1;
+                Eigen::Vector3f normal2 = p3D_c1 - (T21.inverse().translation());
+                float cosParallaxPoint = cosRayParallax(p3D_c1,ray2);
+                if(cosParallaxPoint < minParallaxCos)
+                {
+                    continue;  // Reprojection error too large
+                }
+
+                // 7. Create and add a new MapPoint if everything is valid
+                shared_ptr<MapPoint> pMP(new MapPoint(p3D));
+                pMap_->insertMapPoint(pMP);
+
+                // 8. Register observations in both keyframes
+                pMap_->addObservation(currKeyFrame_->getId(), pMP->getId(), static_cast<int>(i));
+                pMap_->addObservation(pKF->getId(), pMP->getId(), idxMatch);
+
             }
         }
     }
