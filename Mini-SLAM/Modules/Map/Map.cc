@@ -190,11 +190,14 @@ void Map::fuseMapPoints(ID mp1, ID mp2) {
 
     unordered_map<ID,size_t> mMPObsToDelete = mMapPointObs_[mpToDelete];
 
+    std::cout << "mMPObsToDelete.size(): " << mMPObsToDelete.size()<< std::endl;
     for(pair<ID,size_t> pair : mMPObsToDelete){
         ID kfId = pair.first;
         size_t idx = pair.second;
 
         this->removeObservation(kfId,mpToDelete);
+        std::cout << "idx: " << idx << std::endl;
+        std::cout << "vMapPoints_[idx] = " << mKeyFrames_[kfId]->getMapPoints()[idx] << std::endl;
         mKeyFrames_[kfId]->setMapPoint(idx, nullptr);
 
         if(this->isMapPointInKeyFrame(mpToKeep,kfId) == -1){

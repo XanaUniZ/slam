@@ -367,6 +367,7 @@ bool Tracking::needNewKeyFrame() {
     std::cout << "nFramesFromLastKF_:\t" << nFramesFromLastKF_ << std::endl;
     if ((nFeatTracked_  < min_feat_tracked) ||
     (nFramesFromLastKF_ > max_frames_between_KF)){
+        nFramesFromLastKF_ = 0;
         return true;
     }
 

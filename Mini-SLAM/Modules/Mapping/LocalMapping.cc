@@ -54,6 +54,14 @@ void LocalMapping::mapPointCulling() {
     /*
      * Your code for Lab 4 - Task 4 here!
      */
+    // std::unordered_map<ID,std::shared_ptr<MapPoint>> vMapPoints = pMap_.getMapPoints();
+
+    // for(size_t i = 0; i < vMapPoints.size(); i++){
+    //     shared_ptr<MapPoint> pMP = vMapPoints[i];
+    //     int n_obs = getNumberOfObservations(pMP.get_ID());
+    // }
+
+    // mMapPointObs_;
 }
 
 void LocalMapping::triangulateNewMapPoints() {
@@ -105,7 +113,8 @@ void LocalMapping::triangulateNewMapPoints() {
                  * Your code for Lab 4 - Task 2 here!
                  * Note that the last KeyFrame inserted is stored at this->currKeyFrame_
                  */
-                float min_reprError = 5.991;
+                // float min_reprError = 5.991;
+                float min_reprError = 1.0;
                 float minParallaxCos = 0.9998; // From YAML files
 
                 // 1. Get the matched keypoints in each keyframe
@@ -134,8 +143,8 @@ void LocalMapping::triangulateNewMapPoints() {
                 cv::Point2f uv2 = calibration2->project(p3D_c2);
                 cv::Point2f kp1Copy = kp1.pt;
                 cv::Point2f kp2Copy = kp1.pt;
-                float repError_c1 = squaredReprojectionError(kp1Copy,uv1) > 5.991;
-                float repError_c2 = squaredReprojectionError(kp2Copy,uv2) > 5.991;
+                float repError_c1 = squaredReprojectionError(kp1Copy,uv1) > min_reprError;
+                float repError_c2 = squaredReprojectionError(kp2Copy,uv2) > min_reprError;
                 if((repError_c1 > min_reprError) || (repError_c2 > min_reprError))
                 {
                     continue;  // Reprojection error too large
@@ -144,7 +153,7 @@ void LocalMapping::triangulateNewMapPoints() {
                 // 6. Check the parallax of the triangulated point
                 Eigen::Vector3f normal1 = p3D_c1;
                 Eigen::Vector3f normal2 = p3D_c1 - (T21.inverse().translation());
-                float cosParallaxPoint = cosRayParallax(p3D_c1,ray2);
+                float cosParallaxPoint = cosRayParallax(normal1,normal2);
                 if(cosParallaxPoint < minParallaxCos)
                 {
                     continue;  // Reprojection error too large
@@ -154,9 +163,13 @@ void LocalMapping::triangulateNewMapPoints() {
                 shared_ptr<MapPoint> pMP(new MapPoint(p3D));
                 pMap_->insertMapPoint(pMP);
 
-                // 8. Register observations in both keyframes
+                // 8. Register observations in map
                 pMap_->addObservation(currKeyFrame_->getId(), pMP->getId(), static_cast<int>(i));
                 pMap_->addObservation(pKF->getId(), pMP->getId(), idxMatch);
+
+                // 9. Register observations in both keyframes
+                currKeyFrame_->setMapPoint(static_cast<int>(i), pMP);
+                pKF->setMapPoint(idxMatch, pMP);
 
             }
         }
