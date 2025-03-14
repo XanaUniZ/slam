@@ -190,8 +190,8 @@ if __name__=="__main__":
             numpy.max(trans_error), sep="")
 
     else:
-        print("RMS ATE (mm): ", numpy.sqrt(numpy.dot(trans_error,trans_error) / len(trans_error)))
         print("Trajectory Length: ",  len(second_list))
+        print("RMS ATE (m): ", numpy.sqrt(numpy.dot(trans_error,trans_error) / len(trans_error)))
         #print "%f"%numpy.sqrt(numpy.dot(trans_error,trans_error) / len(trans_error))
         
     if args.save_associations:

@@ -63,5 +63,18 @@ Eigen::Matrix<float,3,3> computeEssentialMatrixFromPose(Sophus::SE3f& T12){
      * Your code for Lab 4 - Task 2 here!
      */
 
+    // Extract rotation matrix and translation vector from T12
+    Eigen::Matrix3f R = T12.rotationMatrix();
+    Eigen::Vector3f t = T12.translation();
+
+    // Compute the skew-symmetric matrix for translation vector t
+    Eigen::Matrix3f t_skew;
+    t_skew << 0, -t.z(), t.y(),
+              t.z(), 0, -t.x(),
+              -t.y(), t.x(), 0;
+
+    // Compute Essential matrix E = [t]_skew * R
+    E = t_skew * R;
+
     return E;
 }

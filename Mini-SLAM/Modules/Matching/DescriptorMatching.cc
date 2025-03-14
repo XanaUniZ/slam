@@ -359,6 +359,84 @@ int fuse(std::shared_ptr<KeyFrame> pKF, int th, std::vector<std::shared_ptr<MapP
         /*
          * Your code for Lab 4 - Task 3 here!
          */
+        // Check normal orientation
+        Eigen::Vector3f rayWorld = pMP->getWorldPosition() - pKF->getPose().inverse().translation();
+        float viewCos = rayWorld.normalized().dot(pMP->getNormalOrientation());
+
+        if(viewCos < 0.5){
+            continue;
+        }
+
+        //Check distance is in the scale invariance region of the MapPoint
+        float dist = rayWorld.norm();
+        float maxDistance = pMP->getMaxDistanceInvariance();
+        float minDistance = pMP->getMinDistanceInvariance();
+
+        if(dist < minDistance || dist > maxDistance){
+            continue;
+        }
+
+        //Predict scale
+        int predictedOctave = ceil(log(maxDistance/dist)/log(pKF->getScaleFactor(1)));
+        if(predictedOctave < 0)
+            predictedOctave = 0;
+        else if(predictedOctave > pKF->getNumberOfScales())
+            predictedOctave = pKF->getNumberOfScales();
+
+        //Project map point into the current frame
+        Eigen::Vector3f p3Dcam = Tcw * pMP->getWorldPosition();
+        cv::Point2f uv = calibration->project(p3Dcam);
+        
+        float radius = pKF->getScaleFactor(predictedOctave);
+        if(viewCos>0.998)
+            radius *= 2.5;
+        else
+            radius *= 4.0;
+        // radius *= 15;
+
+        //Get candidates whose coordinates are close to the current point
+        predictedOctave = std::min(predictedOctave, pKF->getNumberOfScales()-1);
+        int minOctave = std::max(0, predictedOctave-1);
+        int maxOctave = std::min(pKF->getNumberOfScales()-1, predictedOctave+1);
+        pKF->getFeaturesInArea(uv.x, uv.y, radius, minOctave, maxOctave, vIndicesToCheck);
+
+        cv::Mat desc = pMP->getDescriptor();
+
+        //Match with the one with the smallest Hamming distance
+        int bestDist = 255, secondBestDist = 255;
+        size_t bestIdx;
+        for(auto j : vIndicesToCheck){
+            // if(pKF->getMapPoint(j)){
+            //     continue;
+            // }
+
+            int ham_dist = HammingDistance(desc.row(0),pKF->getDescriptors().row(j));
+
+            if(ham_dist < bestDist){
+                secondBestDist = bestDist;
+                bestDist = ham_dist;
+                bestIdx = j;
+            }
+            else if(ham_dist < secondBestDist){
+                secondBestDist = ham_dist;
+            }
+        }
+
+        if(bestDist <= th && (float)bestDist < (float(secondBestDist)*0.9)){
+            std::vector<std::shared_ptr<MapPoint>> mapPoints = pKF->getMapPoints(); 
+            if(mapPoints[bestIdx]){
+                // If the Keypoint has a MapPoint associated we need to fuse it
+                // std::cout << "pMP->getId()" << pMP->getId() << std::endl; 
+                // std::cout << "mapPoints[bestIdx]->getId()" << mapPoints[bestIdx]->getId() << std::endl; 
+                pMap->fuseMapPoints( pMP->getId(), mapPoints[bestIdx]->getId());
+                // std::cout<<"Fused two observations"<<std::endl;
+            }else{
+                // If the matched KeyPoint has no MapPoint associated, just add the observation.
+                pKF->setMapPoint(bestIdx, pMP);
+                pMap->addObservation(pKF->getId(),pMP->getId(),bestIdx);
+                // std::cout<<"Added a new observation when fusing"<<std::endl;
+            }
+        }
     }
 
     return nFused;
