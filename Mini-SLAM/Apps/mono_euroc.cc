@@ -55,7 +55,7 @@ int main(int argc, char **argv){
     //Process the sequence
     cv::Mat currIm;
     double currTs;
-    for(int i = 750; i < sequence.getLenght(); i++){
+    for(int i = 150; i < sequence.getLenght(); i++){
         sequence.getLeftImage(i,currIm);
         sequence.getTimeStamp(i,currTs);
 
