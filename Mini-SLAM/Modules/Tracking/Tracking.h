@@ -44,6 +44,10 @@
 
 #include <memory>
 
+// DBoW2
+#include <DBoW2/DBoW2.h> // defines OrbVocabulary and OrbDatabase
+using namespace DBoW2;
+
 class Tracking {
 public:
     Tracking();
@@ -87,6 +91,9 @@ private:
 
     //Tracks the local map into the current frame to get more matches
     bool trackLocalMap();
+
+    //Relocalization func
+    bool relocalize();
 
     //Feature and descriptor extractors
     std::shared_ptr<Feature> featExtractor_;
@@ -139,6 +146,9 @@ private:
 
     //Settings of the system
     Settings settings_;
+
+    //XAVI: Variables for relocation
+    OrbDatabase dbowDB_; // false = do not use direct index
 };
 
 

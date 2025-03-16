@@ -30,4 +30,4 @@ target_link_libraries(${PROGRAM_NAME} ${OpenCV_LIBS} mini_slam DBoW2)
 
 set(PROGRAM_NAME minislam_dbow2)
 add_executable(${PROGRAM_NAME} minislam_dbow2.cc)
-target_link_libraries(${PROGRAM_NAME} ${OpenCV_LIBS} mini_slam DBoW2)
+target_link_libraries(${PROGRAM_NAME} ${OpenCV_LIBS} mini_slam DBoW2 stdc++fs)

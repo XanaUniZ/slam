@@ -64,7 +64,22 @@ Tracking::Tracking(Settings& settings, std::shared_ptr<FrameVisualizer>& visuali
     bInserted = false;
 
     settings_ = settings;
+
+    std::cout << "Opening Vocab" << std::endl;
+    //  OrbVocabulary voc("ORBvoc.txt"); // XAVI: use this
+    OrbVocabulary voc("small_voc.yml.gz");
+
+    dbowDB_ = OrbDatabase(voc, false, 0);                   
 }
+
+std::vector<cv::Mat> changeStructure(const cv::Mat &plain) {
+    std::vector<cv::Mat> out;
+    out.resize(plain.rows);
+    for (int i = 0; i < plain.rows; ++i) {
+      out[i] = plain.row(i).clone();
+    }
+    return out;
+  }
 
 bool Tracking::doTracking(const cv::Mat &im, Sophus::SE3f &Tcw) {
     currIm_ = im.clone();
@@ -128,8 +143,226 @@ bool Tracking::doTracking(const cv::Mat &im, Sophus::SE3f &Tcw) {
     //Camera tracking failed last frame, try to rellocalise
     else{
         //Not implemented yet
+        //XAVI: HERE WE DO THE RELOCALIZATION
+        // return false;
+
+        // Get the closest keyframe in the database
+        std::cout << "ENTERING RELOCALIZATION" << std::endl;
+
+        bool relocSuccess = relocalize();
+
+        if (relocSuccess && trackLocalMap()) {
+            // Promote to KeyFrame and update visualization
+            std::cout << "Before KeyFRame promotion" << std::endl;
+            promoteCurrentFrameToKeyFrame();
+            std::cout << "KeyFRame promotion done!" << std::endl;
+            updateMotionModel();
+            std::cout << "updateMotionModel done!" << std::endl;
+            visualizer_->drawCurrentFrame(currFrame_);
+            std::cout << "drawCurrentFrame done!" << std::endl;
+
+
+            cv::waitKey(0);
+            return true;
+        }
+
+        std::cout << "WARNING: FAILED RELOCALIZATION" << std::endl;
         return false;
     }
+}
+
+bool goodMapPoint(
+    const Sophus::SE3f& currFramePose,
+    const Sophus::SE3f& keyframePose,
+    const Eigen::Vector3f& mapPointPos,
+    const cv::KeyPoint& currKp,
+    const cv::KeyPoint& kfKp,
+    const std::shared_ptr<CameraModel>& currCalib,
+    const std::shared_ptr<CameraModel>& kfCalib,
+    float maxReprojError = 5.991f,
+    float minParallaxCos = 0.9998f) 
+{
+    // Convert to double precision for Eigen operations
+    const Sophus::SE3d currPoseD = currFramePose.cast<double>();
+    const Sophus::SE3d kfPoseD = keyframePose.cast<double>();
+    const Eigen::Vector3d mapPointPosD = mapPointPos.cast<double>();
+
+    // 1. Create non-const copies for camera projection
+    Eigen::Vector3d P_curr = currPoseD.inverse() * mapPointPosD;  // Remove const
+    Eigen::Vector3d P_kf = kfPoseD.inverse() * mapPointPosD;     // Remove const
+
+    // Front-checking
+    if(P_curr.z() <= 0 || P_kf.z() <= 0) return false;
+
+    // 2. Project using non-const positions
+    Eigen::Vector2d projCurr, projKF;
+    try {
+        projCurr = currCalib->project(P_curr);  // Now passes non-const reference
+        projKF = kfCalib->project(P_kf);        // Now passes non-const reference
+    } catch (const std::exception& e) {
+        return false;
+    }
+
+    // Convert to OpenCV format
+    const cv::Point2f projCurrCV(projCurr.x(), projCurr.y());
+    const cv::Point2f projKFCV(projKF.x(), projKF.y());
+
+    // 3. Calculate reprojection errors
+    const float errCurr = cv::norm(currKp.pt - projCurrCV);
+    const float errKF = cv::norm(kfKp.pt - projKFCV);
+    if(errCurr > maxReprojError || errKF > maxReprojError) return false;
+
+    // 4. Parallax check with normalized rays
+    const Eigen::Vector3d camCurr = currPoseD.inverse().translation();
+    const Eigen::Vector3d camKF = kfPoseD.inverse().translation();
+    const Eigen::Vector3d rayCurr = (mapPointPosD - camCurr).normalized();
+    const Eigen::Vector3d rayKF = (mapPointPosD - camKF).normalized();
+    
+    return rayCurr.dot(rayKF) < minParallaxCos;
+}
+
+bool Tracking::relocalize(){
+    // Get camera matrix
+    shared_ptr<CameraModel> calibration = currFrame_.getCalibration();
+    float fx = calibration->getParameter(0);
+    float fy = calibration->getParameter(1);
+    float cx = calibration->getParameter(2);
+    float cy = calibration->getParameter(3);
+    cv::Mat cameraMatrix = (cv::Mat_<double>(3,3) << 
+        fx, 0,  cx,
+        0,  fy, cy,
+        0,  0,  1);
+    cv::Mat distCoeffs   = cv::Mat::zeros(4, 1, CV_32F);  // or your real distortion
+
+    // Query the DB
+    QueryResults ret;
+    cv::Mat curr_desc = currFrame_.getDescriptors();
+    dbowDB_.query(changeStructure(curr_desc), ret, 4);
+
+    // Transpose the current descriptor, as the following code
+    // assumes Ndesc x descDim
+    // curr_desc = curr_desc.t();
+
+    bool relocSuccess = false;
+
+    // Iterate through each top candidate
+    for (const auto& result : ret) {
+        // Retrieve candidate KeyFrame
+        std::shared_ptr<KeyFrame> candidateKF = pMap_->getKeyFrames()[result.Id];
+        std::vector<std::shared_ptr<MapPoint>> mapPoints = candidateKF->getMapPoints();
+
+
+        //////////////////////////////////////////////////////////////////////////////
+        // NNDR Matching
+        //////////////////////////////////////////////////////////////////////////////
+        // Collect valid MapPoints and their descriptors from the candidate KeyFrame
+        std::vector<std::shared_ptr<MapPoint>> validMapPoints;
+        cv::Mat kfDescriptors;
+        std::vector<int> originalIndices;
+        for (size_t i = 0; i < mapPoints.size(); ++i) {
+            auto mp = mapPoints[i];
+            if (mp) {
+                validMapPoints.push_back(mp);
+                originalIndices.push_back(i);
+                kfDescriptors.push_back(candidateKF->getDescriptors().row(i));
+            }
+        }
+        if (validMapPoints.empty()) continue;
+
+        // Match current frame descriptors with candidate's MapPoints using ratio test
+        cv::BFMatcher matcher(cv::NORM_HAMMING);
+        std::vector<std::vector<cv::DMatch>> knnMatches;
+        matcher.knnMatch(curr_desc, kfDescriptors, knnMatches, 2);
+
+        std::vector<cv::DMatch> goodMatches;
+        for (size_t i = 0; i < knnMatches.size(); ++i) {
+            if (knnMatches[i].size() < 2) continue;
+            const cv::DMatch& m1 = knnMatches[i][0];
+            const cv::DMatch& m2 = knnMatches[i][1];
+            if (m1.distance < 0.9 * m2.distance) {
+                goodMatches.push_back(m1);
+            }
+        }
+        if (goodMatches.size() < 4) continue;
+
+        std::cout << "Matching done!" << std::endl;
+
+        //////////////////////////////////////////////////////////////////////////////
+        // PnP
+        //////////////////////////////////////////////////////////////////////////////
+        // Collect 2D-3D correspondences
+        std::vector<cv::Point3f> pts3D;
+        std::vector<cv::Point2f> pts2D;
+        for (const auto& match : goodMatches) {
+            // 2D match
+            pts2D.push_back(currFrame_.getKeyPoint(match.queryIdx).pt);
+            
+            // 3D match
+            auto& mp = validMapPoints[match.trainIdx];
+            Eigen::Vector3f eigenPos = mp->getWorldPosition();
+            pts3D.push_back(cv::Point3f(
+                eigenPos.x(), 
+                eigenPos.y(), 
+                eigenPos.z()
+            ));
+        }
+
+        // Solve PnP using RANSAC
+        cv::Mat rvec, tvec, inliers;
+        bool pnpSuccess = cv::solvePnPRansac(
+            pts3D, pts2D, cameraMatrix, distCoeffs,
+            rvec, tvec, false, 100, 8.0, 0.99, inliers
+        );
+        std::cout << "PnP done!" << std::endl;
+
+        //////////////////////////////////////////////////////////////////////////////
+        // Adding MapPoints
+        //////////////////////////////////////////////////////////////////////////////
+        // Check if PnP was successful with enough inliers
+        if (pnpSuccess && inliers.rows >= 50) {
+            // SET THE POSE
+            // Convert rotation vector to matrix and create Sophus pose
+            cv::Mat R;
+            cv::Rodrigues(rvec, R);
+            Eigen::Matrix3f R_eigen;
+            Eigen::Vector3f t_eigen;
+            R_eigen << R.at<double>(0,0), R.at<double>(0,1), R.at<double>(0,2),
+                       R.at<double>(1,0), R.at<double>(1,1), R.at<double>(1,2),
+                       R.at<double>(2,0), R.at<double>(2,1), R.at<double>(2,2);
+            t_eigen << tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2);
+            Sophus::SE3f Tcw(R_eigen, t_eigen);
+
+            // Update current frame pose and MapPoints
+            currFrame_.setPose(Tcw);
+
+            // SET THE MapPoints TO THE FRAME
+            for (int i = 0; i < inliers.rows; ++i) {
+                int idx = inliers.at<int>(i);
+                const auto& match = goodMatches[idx];
+                const int origIdx = originalIndices[match.trainIdx];
+                if(goodMapPoint(
+                    Tcw,                                // Current frame pose
+                    candidateKF->getPose(),             // Candidate KF pose
+                    validMapPoints[match.trainIdx]->getWorldPosition(),
+                    currFrame_.getKeyPoint(match.queryIdx),
+                    candidateKF->getKeyPoint(origIdx),  // Original KF keypoint
+                    currFrame_.getCalibration(),
+                    candidateKF->getCalibration()
+                )) {
+                    currFrame_.setMapPoint(match.queryIdx, validMapPoints[match.trainIdx]);
+                    // pMap->addObservation(pKF->getId(),pMP->getId(),match.queryIdx);
+                }
+            }
+            
+            // FINAL COMPROBATIONS & VIZ
+            currFrame_.checkAllMapPointsAreGood();
+            mapVisualizer_->updateCurrentPose(Tcw);
+            std::cout << "PnP succeed!" << std::endl;
+            return true; // Exit loop after successful relocalization
+        }
+    }
+
+    return false;
 }
 
 void Tracking::updateLastMapPoints() {
@@ -368,6 +601,8 @@ bool Tracking::needNewKeyFrame() {
     if ((nFeatTracked_  < min_feat_tracked) ||
     (nFramesFromLastKF_ > max_frames_between_KF)){
         nFramesFromLastKF_ = 0;
+        // std::cout << "Desc size: " << currFrame_.getDescriptors().size() << std::endl;
+        // std::cout << "Desc size: " << changeStructure(currFrame_.getDescriptors()).size() << std::endl;
         return true;
     }
 
@@ -375,6 +610,8 @@ bool Tracking::needNewKeyFrame() {
 }
 
 void Tracking::promoteCurrentFrameToKeyFrame() {
+    // Add frame to the DB
+    dbowDB_.add(changeStructure(currFrame_.getDescriptors()));
     //Promote current frame to KeyFrame
     pLastKeyFrame_ = shared_ptr<KeyFrame>(new KeyFrame(currFrame_));
 
