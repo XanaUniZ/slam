@@ -54,6 +54,7 @@ void LocalMapping::mapPointCulling() {
     /*
      * Your code for Lab 4 - Task 4 here!
      */
+    return;
     int min_n_obs = 3;
     int min_n_keyframes = 5;
 

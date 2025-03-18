@@ -359,8 +359,8 @@ bool Tracking::needNewKeyFrame() {
     /*
      * Your code for Lab 4 - Task 1 here!
      */
-    int max_frames_between_KF = 100;
-    int min_feat_tracked = 50;
+    int max_frames_between_KF = 5;
+    int min_feat_tracked = 90;
     nFramesFromLastKF_ += 1;
 
     std::cout << "nFeatTracked_:\t" << nFeatTracked_ << std::endl;

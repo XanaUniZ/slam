@@ -4,3 +4,7 @@ trajectory.txt
 Datasets*
 venv*
 *__pycache__*
+*.yml.gz
+*tar.gz
+Thirdparty/DBoW2*
+ORBvoc.txt

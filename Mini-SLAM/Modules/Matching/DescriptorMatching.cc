@@ -208,11 +208,11 @@ int searchWithProjection(Frame& currFrame, int th, std::vector<std::shared_ptr<M
         cv::Point2f uv = currCalibration->project(p3Dc);
 
         float radius = currFrame.getScaleFactor(predictedOctave);
-        // if(viewCos>0.998)
-        //     radius *= 2.5;
-        // else
-        //     radius *= 4.0;
-        radius *= 15;
+        if(viewCos>0.998)
+            radius *= 2.5;
+        else
+            radius *= 4.0;
+        // radius *= 15;
 
         /*
          * Your matching code for Lab 3 - Task 4 goes here
