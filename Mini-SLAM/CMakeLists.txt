@@ -28,6 +28,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/Pangolin/build")
   set(Pangolin_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/Pangolin/build")
 endif()
 
+# # For DBoW2
+# if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/DBoW2/build")
+#   set(DBoW2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/DBoW2/build")
+# endif()
+# find_package(DBoW2 REQUIRED)
+# include_directories(${CMAKE_SOURCE_DIR}/Thirdparty/DBoW2)
+# For DBoW2: Use add_subdirectory instead of find_package
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/DBoW2")
+  add_subdirectory(Thirdparty/DBoW2)  # Build DBoW2 as part of your project
+  include_directories("${CMAKE_SOURCE_DIR}/Thirdparty/DBoW2/src")  # Point to DBoW2 headers
+endif()
+
 add_subdirectory(Lab0)
 add_subdirectory(Modules)
 add_subdirectory(Apps)

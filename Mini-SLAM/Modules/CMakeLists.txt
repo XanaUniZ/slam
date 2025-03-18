@@ -85,4 +85,5 @@ target_link_libraries(${LIBRARY_NAME}
         ${Pangolin_LIBRARIES}
         ${CMAKE_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o_core.so
         ${CMAKE_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o_stuff.so
-        ${CMAKE_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o_types_sba.so)
+        ${CMAKE_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o_types_sba.so
+        DBoW2)
