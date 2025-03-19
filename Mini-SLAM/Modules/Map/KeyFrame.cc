@@ -103,6 +103,7 @@ float KeyFrame::computeSceneMedianDepth() {
 
 void KeyFrame::setMapPoint(size_t idx, std::shared_ptr<MapPoint> pMP) {
     if(!pMP){
+        // std::cout << "Checking  assert!!!!!" << std::endl;
         assert(vMapPoints_[idx]);
     }
     vMapPoints_[idx] = pMP;

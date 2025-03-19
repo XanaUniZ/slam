@@ -19,6 +19,7 @@
 #include "Optimization/g2oBundleAdjustment.h"
 #include "Matching/DescriptorMatching.h"
 #include "Utils/Geometry.h"
+#include <unordered_set>
 
 using namespace std;
 
@@ -54,25 +55,35 @@ void LocalMapping::mapPointCulling() {
     /*
      * Your code for Lab 4 - Task 4 here!
      */
-    int min_n_obs = 3;
+    // return;
+    int min_n_obs = 2;
     int min_n_keyframes = 5;
-
 
     int n_keyframes = pMap_->getKeyFrames().size();
 
     if (n_keyframes > min_n_keyframes){
-        auto& vMapPoints = pMap_->getMapPoints(); // Use reference to avoid copies
+        auto vMapPoints = pMap_->getMapPoints(); // Use reference to avoid copies
+        std::unordered_set<ID> points_to_remove;
 
         // Iterate using range-based for loop
-        for (const auto& pair : vMapPoints) {
-            const auto& pMP = pair.second;
+        for (auto pair : vMapPoints) {
+            // std::cout << "Inside Loop " << std::endl;
+            auto* pMP = pair.second.get();
             if (!pMP) continue; // Skip if nullptr (safety check)
 
             int n_obs = pMap_->getNumberOfObservations(pMP->getId());
+            // std::cout << "n_obs: " << n_obs << std::endl;
             if (n_obs < min_n_obs) {
-                pMap_->removeMapPoint(pMP->getId());
+                // std::cout << "Inside removeMapPoint " << std::endl;
+                // std::cout << "pMP->getId() " << pMP->getId() << std::endl;
+                points_to_remove.insert(pMP->getId());
             }
         }
+
+        for (ID point : points_to_remove) {
+            pMap_->removeMapPoint(point);
+        }
+        
     }
 }
 
