@@ -48,6 +48,7 @@ public:
      * Retrieves the i left image. Returns false if the image does not exit
      */
     bool getLeftImage(size_t idx, cv::Mat& im);
+    bool getLeftImage(size_t idx, cv::Mat& im, std::string* imagePath);
 
     /*
      * Retrieves the i right image. Returns false if the image does not exit

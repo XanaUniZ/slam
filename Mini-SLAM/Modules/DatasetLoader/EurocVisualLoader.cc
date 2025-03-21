@@ -73,6 +73,19 @@ EurocVisualLoader::EurocVisualLoader(std::string folderPath, std::string timesPa
 
 }
 
+bool EurocVisualLoader::getLeftImage(size_t idx, cv::Mat& im, std::string* imagePath) {
+    if(idx >= vTimeStamps_.size()) return false;
+
+    //cout << "[EurocVisualLoader]: loading image at " << vImgsPairs_[idx].first << endl;
+    // Assign the path to the string pointed by imagePath
+    if (imagePath) { // Check if the pointer is valid
+        *imagePath = vImgsPairs_[idx].first;
+    }
+    im = cv::imread(vImgsPairs_[idx].first, cv::IMREAD_UNCHANGED);
+
+    return true;
+}
+
 bool EurocVisualLoader::getLeftImage(size_t idx, cv::Mat& im) {
     if(idx >= vTimeStamps_.size()) return false;
 

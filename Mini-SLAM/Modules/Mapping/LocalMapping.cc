@@ -32,7 +32,7 @@ LocalMapping::LocalMapping(Settings& settings, std::shared_ptr<Map> pMap) {
     pMap_ = pMap;
 }
 
-void LocalMapping::doMapping(std::shared_ptr<KeyFrame> &pCurrKeyFrame) {
+void LocalMapping::doMapping(std::shared_ptr<KeyFrame> &pCurrKeyFrame, trackingResult* trackingRes) {
     //Keep input keyframe
     currKeyFrame_ = pCurrKeyFrame;
 
@@ -40,10 +40,10 @@ void LocalMapping::doMapping(std::shared_ptr<KeyFrame> &pCurrKeyFrame) {
         return;
 
     //Remove redundant MapPoints
-    mapPointCulling();
+    mapPointCulling(trackingRes);
 
     //Triangulate new MapPoints
-    triangulateNewMapPoints();
+    triangulateNewMapPoints(trackingRes);
 
     checkDuplicatedMapPoints();
 
@@ -51,7 +51,7 @@ void LocalMapping::doMapping(std::shared_ptr<KeyFrame> &pCurrKeyFrame) {
     localBundleAdjustment(pMap_.get(),currKeyFrame_->getId());
 }
 
-void LocalMapping::mapPointCulling() {
+void LocalMapping::mapPointCulling(trackingResult* trackingRes) {
     /*
      * Your code for Lab 4 - Task 4 here!
      */
@@ -60,6 +60,8 @@ void LocalMapping::mapPointCulling() {
     int min_n_keyframes = 5;
 
     int n_keyframes = pMap_->getKeyFrames().size();
+
+    long removed_points = 0;
 
     if (n_keyframes > min_n_keyframes){
         auto vMapPoints = pMap_->getMapPoints(); // Use reference to avoid copies
@@ -77,17 +79,21 @@ void LocalMapping::mapPointCulling() {
                 // std::cout << "Inside removeMapPoint " << std::endl;
                 // std::cout << "pMP->getId() " << pMP->getId() << std::endl;
                 points_to_remove.insert(pMP->getId());
+                std::cout << "HII!!!!!\n";
             }
         }
 
+        removed_points = static_cast<double>(points_to_remove.size()) / static_cast<double>(vMapPoints.size());
         for (ID point : points_to_remove) {
             pMap_->removeMapPoint(point);
         }
         
     }
+
+    trackingRes->culledPoints = removed_points;
 }
 
-void LocalMapping::triangulateNewMapPoints() {
+void LocalMapping::triangulateNewMapPoints(trackingResult* trackingRes) {
     //Get a list of the best covisible KeyFrames with the current one
     vector<pair<ID,int>> vKeyFrameCovisible = pMap_->getCovisibleKeyFrames(currKeyFrame_->getId());
 
@@ -98,7 +104,10 @@ void LocalMapping::triangulateNewMapPoints() {
     Sophus::SE3f T1w = currKeyFrame_->getPose();
 
     int nTriangulated = 0;
-
+    long pointsBehind = 0;
+    long highError = 0;
+    long lowParallax = 0;
+    long totalPoints = 0;
     for(pair<ID,int> pairKeyFrame_Obs : vKeyFrameCovisible){
         int commonObservations = pairKeyFrame_Obs.second;
         if(commonObservations < 20)
@@ -137,6 +146,7 @@ void LocalMapping::triangulateNewMapPoints() {
                  * Note that the last KeyFrame inserted is stored at this->currKeyFrame_
                  */
                 // float min_reprError = 5.991;
+                totalPoints += 1;
                 float min_reprError = 1.0;
                 float minParallaxCos = 0.9998; // From YAML files
 
@@ -158,6 +168,7 @@ void LocalMapping::triangulateNewMapPoints() {
 
                 //Check that the point has been triangulated in front of the cameras (possitive depth)
                 if((p3D_c1(2) < 0.0f) || (p3D_c2(2) < 0.0f)){
+                    pointsBehind += 1;
                     continue; // Point behind at least one camera
                 }
 
@@ -170,6 +181,7 @@ void LocalMapping::triangulateNewMapPoints() {
                 float repError_c2 = squaredReprojectionError(kp2Copy,uv2) > min_reprError;
                 if((repError_c1 > min_reprError) || (repError_c2 > min_reprError))
                 {
+                    highError += 1;
                     continue;  // Reprojection error too large
                 }
 
@@ -179,6 +191,7 @@ void LocalMapping::triangulateNewMapPoints() {
                 float cosParallaxPoint = cosRayParallax(normal1,normal2);
                 if(cosParallaxPoint < minParallaxCos)
                 {
+                    lowParallax += 1;
                     continue;  // Reprojection error too large
                 }
 
@@ -193,10 +206,17 @@ void LocalMapping::triangulateNewMapPoints() {
                 // 9. Register observations in map
                 pMap_->addObservation(currKeyFrame_->getId(), pMP->getId(), static_cast<int>(i));
                 pMap_->addObservation(pKF->getId(), pMP->getId(), idxMatch);
+                nTriangulated += 1;
 
             }
         }
     }
+
+    trackingRes->pointsBehind += pointsBehind;
+    trackingRes->highError += highError;
+    trackingRes->lowParallax += lowParallax;
+    trackingRes->nTriangulated += nTriangulated;
+    trackingRes->totalPoints += totalPoints;
 }
 
 void LocalMapping::checkDuplicatedMapPoints() {

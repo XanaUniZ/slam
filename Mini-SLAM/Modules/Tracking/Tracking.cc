@@ -26,8 +26,16 @@
 #include "Matching/DescriptorMatching.h"
 
 #include "Optimization/g2oBundleAdjustment.h"
+ // DBoW2
+ #include <DBoW2.h> // defines OrbVocabulary and OrbDatabase
+  // OpenCV
+  #include <opencv2/core.hpp>
+  #include <opencv2/highgui.hpp>
+  #include <opencv2/features2d.hpp>
+  #include <experimental/filesystem> 
 
 using namespace std;
+using namespace DBoW2;
 
 Tracking::Tracking(){}
 
@@ -65,11 +73,15 @@ Tracking::Tracking(Settings& settings, std::shared_ptr<FrameVisualizer>& visuali
 
     settings_ = settings;
 
+    // load the vocabulary from disk
     std::cout << "Opening Vocab" << std::endl;
     //  OrbVocabulary voc("ORBvoc.txt"); // XAVI: use this
-    OrbVocabulary voc("small_voc.yml.gz");
+    //  OrbVocabulary voc("ORBvoc.txt.tar.gz"); // XAVI: use this
+    OrbVocabulary* voc = new OrbVocabulary();
+    voc->loadFromTextFile("ORBvoc.txt");
+    // OrbVocabulary voc("small_voc.yml.gz");
 
-    dbowDB_ = OrbDatabase(voc, false, 0);                   
+    dbowDB_ = OrbDatabase(*voc, false, 0);                   
 }
 
 std::vector<cv::Mat> changeStructure(const cv::Mat &plain) {
@@ -81,14 +93,108 @@ std::vector<cv::Mat> changeStructure(const cv::Mat &plain) {
     return out;
   }
 
-bool Tracking::doTracking(const cv::Mat &im, Sophus::SE3f &Tcw) {
+// bool Tracking::doTracking(const cv::Mat &im, Sophus::SE3f &Tcw) {
+//     currIm_ = im.clone();
+
+//     //Update previous frame
+//     if(status_ != NOT_INITIALIZED)
+//         prevFrame_.assign(currFrame_);
+
+//     currFrame_.setIm(currIm_);
+
+//     //Extract features in the current image
+//     extractFeatures(im);
+
+//     visualizer_->drawCurrentFeatures(currFrame_.getKeyPointsDistorted(),currIm_);
+
+//     //If no map is initialized, perform monocular initialization
+//     if(status_ == NOT_INITIALIZED){
+//         if(monocularMapInitialization()){
+//             status_ = GOOD;
+//             Tcw = currFrame_.getPose();
+
+//             //Update motion model
+//             updateMotionModel();
+
+//             return true;
+//         }
+//         else{
+//             return false;
+//         }
+//     }
+//     //SLAM is initialized and tracking was good, track new frame
+//     else if(status_ == GOOD){
+//         //Mapping may has added/deleted MapPoints
+//         updateLastMapPoints();
+//         if(cameraTracking()){
+//             if(trackLocalMap()){
+//                 //Check if we need to insert a new KeyFrame into the system
+//                 if(needNewKeyFrame()){
+//                     promoteCurrentFrameToKeyFrame();
+//                 }
+
+//                 //Update motion model
+//                 updateMotionModel();
+
+//                 Tcw = currFrame_.getPose();
+
+//                 visualizer_->drawCurrentFrame(currFrame_);
+
+//                 return true;
+//             }
+//             else{
+//                 status_ = LOST;
+//                 return false;
+//             }
+//         }
+//         else{
+//             status_ = LOST;
+//             return false;
+//         }
+//     }
+//     //Camera tracking failed last frame, try to rellocalise
+//     else{
+//         //Not implemented yet
+//         //XAVI: HERE WE DO THE RELOCALIZATION
+//         // return false;
+
+//         // Get the closest keyframe in the database
+//         std::cout << "ENTERING RELOCALIZATION" << std::endl;
+
+//         bool relocSuccess = relocalize();
+
+//         if (relocSuccess && trackLocalMap()) {
+//             // Promote to KeyFrame and update visualization
+//             // std::cout << "Before KeyFRame promotion" << std::endl;
+//             promoteCurrentFrameToKeyFrame();
+//             // std::cout << "KeyFRame promotion done!" << std::endl;
+//             updateMotionModel();
+//             // std::cout << "updateMotionModel done!" << std::endl;
+//             visualizer_->drawCurrentFrame(currFrame_);
+//             // std::cout << "drawCurrentFrame done!" << std::endl;
+
+
+//             cv::waitKey(0);
+//             status_ = GOOD;
+//             return true;
+//         }
+//         cv::waitKey(0);
+//         std::cout << "WARNING: FAILED RELOCALIZATION" << std::endl;
+//         status_ = LOST;
+//         return false;
+//     }
+// }
+
+bool Tracking::doTracking(const cv::Mat &im, Sophus::SE3f &Tcw, double ts, trackingResult* trackRes) {
     currIm_ = im.clone();
+    trackRes->isKF = false;
 
     //Update previous frame
     if(status_ != NOT_INITIALIZED)
         prevFrame_.assign(currFrame_);
 
     currFrame_.setIm(currIm_);
+    currFrame_.setTimestamp(ts);
 
     //Extract features in the current image
     extractFeatures(im);
@@ -119,6 +225,7 @@ bool Tracking::doTracking(const cv::Mat &im, Sophus::SE3f &Tcw) {
                 //Check if we need to insert a new KeyFrame into the system
                 if(needNewKeyFrame()){
                     promoteCurrentFrameToKeyFrame();
+                    trackRes->isKF = true;
                 }
 
                 //Update motion model
@@ -153,20 +260,23 @@ bool Tracking::doTracking(const cv::Mat &im, Sophus::SE3f &Tcw) {
 
         if (relocSuccess && trackLocalMap()) {
             // Promote to KeyFrame and update visualization
-            std::cout << "Before KeyFRame promotion" << std::endl;
+            // std::cout << "Before KeyFRame promotion" << std::endl;
             promoteCurrentFrameToKeyFrame();
-            std::cout << "KeyFRame promotion done!" << std::endl;
+            trackRes->isKF = true;
+            // std::cout << "KeyFRame promotion done!" << std::endl;
             updateMotionModel();
-            std::cout << "updateMotionModel done!" << std::endl;
+            // std::cout << "updateMotionModel done!" << std::endl;
             visualizer_->drawCurrentFrame(currFrame_);
-            std::cout << "drawCurrentFrame done!" << std::endl;
+            // std::cout << "drawCurrentFrame done!" << std::endl;
 
 
             cv::waitKey(0);
+            status_ = GOOD;
             return true;
         }
-
+        cv::waitKey(0);
         std::cout << "WARNING: FAILED RELOCALIZATION" << std::endl;
+        status_ = LOST;
         return false;
     }
 }
@@ -243,14 +353,27 @@ bool Tracking::relocalize(){
     // assumes Ndesc x descDim
     // curr_desc = curr_desc.t();
 
-    bool relocSuccess = false;
-
     // Iterate through each top candidate
     for (const auto& result : ret) {
+        std::cout << "Performing attempt" << std::endl;
         // Retrieve candidate KeyFrame
         std::shared_ptr<KeyFrame> candidateKF = pMap_->getKeyFrames()[result.Id];
         std::vector<std::shared_ptr<MapPoint>> mapPoints = candidateKF->getMapPoints();
 
+        std::cout << "currentFrame: " << std::fixed << currFrame_.getTimestamp()*1e9 << setprecision(0) << std::endl;
+        std::cout << "Keyframe: " << std::fixed << candidateKF->getTimestamp()*1e9 << setprecision(0) << std::endl;
+        //////////////////////////////////////////////////////////////////////////////
+        // Debug
+        //////////////////////////////////////////////////////////////////////////////
+        // Display the image
+        cv::imshow("Query Image", currIm_);
+        // Load retrieved image
+        std::ostringstream path;  // Use ostringstream instead of << with string
+        path << "/home/xavi/master_code/slam/Mini-SLAM/Datasets/V102/mav0/cam0/data/" 
+            << candidateKF->getId() << ".png";  // Added parentheses for method call
+
+        // Wait for a key press
+        cv::waitKey(0);
 
         //////////////////////////////////////////////////////////////////////////////
         // NNDR Matching
@@ -267,7 +390,10 @@ bool Tracking::relocalize(){
                 kfDescriptors.push_back(candidateKF->getDescriptors().row(i));
             }
         }
-        if (validMapPoints.empty()) continue;
+        if (validMapPoints.empty()) {
+            std::cout << "validMapPoints.empty()" << std::endl;
+            continue;
+        }
 
         // Match current frame descriptors with candidate's MapPoints using ratio test
         cv::BFMatcher matcher(cv::NORM_HAMMING);
@@ -276,16 +402,24 @@ bool Tracking::relocalize(){
 
         std::vector<cv::DMatch> goodMatches;
         for (size_t i = 0; i < knnMatches.size(); ++i) {
-            if (knnMatches[i].size() < 2) continue;
+            
+            if (knnMatches[i].size() < 2) {
+                std::cout << "knnMatches[i].size() = " << knnMatches[i].size() << std::endl;
+                continue;
+            }
             const cv::DMatch& m1 = knnMatches[i][0];
             const cv::DMatch& m2 = knnMatches[i][1];
             if (m1.distance < 0.9 * m2.distance) {
                 goodMatches.push_back(m1);
             }
         }
-        if (goodMatches.size() < 4) continue;
+        if (goodMatches.size() < 4) {
+            std::cout << "goodMatches.size()" << std::endl;
+            continue;
+        }
+        std::cout << "goodMatches.size(): " << goodMatches.size() << std::endl;
 
-        std::cout << "Matching done!" << std::endl;
+        // std::cout << "Matching done!" << std::endl;
 
         //////////////////////////////////////////////////////////////////////////////
         // PnP
@@ -311,7 +445,7 @@ bool Tracking::relocalize(){
         cv::Mat rvec, tvec, inliers;
         bool pnpSuccess = cv::solvePnPRansac(
             pts3D, pts2D, cameraMatrix, distCoeffs,
-            rvec, tvec, false, 100, 8.0, 0.99, inliers
+            rvec, tvec, false, 5000, 8.0, 0.99, inliers
         );
         std::cout << "PnP done!" << std::endl;
 
@@ -319,7 +453,10 @@ bool Tracking::relocalize(){
         // Adding MapPoints
         //////////////////////////////////////////////////////////////////////////////
         // Check if PnP was successful with enough inliers
-        if (pnpSuccess && inliers.rows >= 50) {
+        std::cout << "pnpSuccess: " << pnpSuccess << std::endl;
+        std::cout << "inliers.rows: " << inliers.rows << std::endl;
+        if (pnpSuccess && inliers.rows >= 5) {
+            std::cout << "PnP Succesful!" << std::endl;
             // SET THE POSE
             // Convert rotation vector to matrix and create Sophus pose
             cv::Mat R;
@@ -357,7 +494,7 @@ bool Tracking::relocalize(){
             // FINAL COMPROBATIONS & VIZ
             currFrame_.checkAllMapPointsAreGood();
             mapVisualizer_->updateCurrentPose(Tcw);
-            std::cout << "PnP succeed!" << std::endl;
+            // std::cout << "PnP succeed!" << std::endl;
             return true; // Exit loop after successful relocalization
         }
     }
@@ -592,8 +729,8 @@ bool Tracking::needNewKeyFrame() {
     /*
      * Your code for Lab 4 - Task 1 here!
      */
-    int max_frames_between_KF = 5;
-    int min_feat_tracked = 90;
+    int max_frames_between_KF = 10;
+    int min_feat_tracked = 100;
     nFramesFromLastKF_ += 1;
 
     std::cout << "nFeatTracked_:\t" << nFeatTracked_ << std::endl;
@@ -614,6 +751,8 @@ void Tracking::promoteCurrentFrameToKeyFrame() {
     dbowDB_.add(changeStructure(currFrame_.getDescriptors()));
     //Promote current frame to KeyFrame
     pLastKeyFrame_ = shared_ptr<KeyFrame>(new KeyFrame(currFrame_));
+
+    pLastKeyFrame_->setTimestamp(currFrame_.getTimestamp());
 
     //Insert KeyFrame into the map
     pMap_->insertKeyFrame(pLastKeyFrame_);
@@ -641,3 +780,21 @@ std::shared_ptr<KeyFrame> Tracking::getLastKeyFrame() {
 void Tracking::updateMotionModel() {
     motionModel_ = currFrame_.getPose() * prevFrame_.getPose().inverse();
 }
+
+
+void Tracking::getTrackingResult(trackingResult* res){
+    res->nKeyframes =  pMap_->getKeyFrames().size();
+    res->nMapPoints =  pMap_->getMapPoints().size();
+    return;
+}
+
+void resetTrackingRes(trackingResult* res){
+    res->pointsBehind = 0;
+    res->highError = 0;
+    res->lowParallax = 0;
+    res->nTriangulated = 0;
+    res->totalPoints = 0;
+    res->isKF = false;
+    res->culledPoints = 0;
+    return;
+} 

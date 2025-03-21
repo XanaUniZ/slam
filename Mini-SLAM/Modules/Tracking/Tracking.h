@@ -48,6 +48,20 @@
 #include <DBoW2/DBoW2.h> // defines OrbVocabulary and OrbDatabase
 using namespace DBoW2;
 
+struct trackingResult {
+    long nKeyframes;
+    long nMapPoints;
+    long pointsBehind;
+    long highError;
+    long lowParallax;
+    long nTriangulated;
+    long totalPoints;
+    bool isKF;
+    long culledPoints;
+};
+
+void resetTrackingRes(trackingResult* res);
+
 class Tracking {
 public:
     Tracking();
@@ -61,12 +75,17 @@ public:
     /*
      * Performs the tracking for an image. Returns true on success
      */
-    bool doTracking(const cv::Mat& im, Sophus::SE3f& Tcw);
+    bool doTracking(const cv::Mat& im, Sophus::SE3f& Tcw, double ts, trackingResult* res);
 
     /*
      * Gets the last KeyFrame inserted into the map
      */
     std::shared_ptr<KeyFrame> getLastKeyFrame();
+
+    /*
+     * Number of tracked frames
+     */
+    void getTrackingResult(trackingResult* res);
 private:
     //Extracts features and descriptors in the current image
     void extractFeatures(const cv::Mat& im);

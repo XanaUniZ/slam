@@ -30,6 +30,7 @@
 #include "System/Settings.h"
 
 #include "Visualization/FrameVisualizer.h"
+#include "Tracking/Tracking.h"
 
 #include <memory>
 
@@ -45,18 +46,18 @@ public:
     /*
      * Does the mapping operative: triangulation, duplication remove and Local Bundle Adjustment
      */
-    void doMapping(std::shared_ptr<KeyFrame>& pCurrKeyFrame);
+    void doMapping(std::shared_ptr<KeyFrame>& pCurrKeyFrame, trackingResult* trackingRes);
 
 private:
     /*
      * Removes from the map redundant or wrongly triangulated points
      */
-    void mapPointCulling();
+    void mapPointCulling(trackingResult* trackingRes);
 
     /*
      * Triangulates new MapPoints with the current KeyFrame
      */
-    void triangulateNewMapPoints();
+    void triangulateNewMapPoints(trackingResult* trackingRes);
 
     /*
      * Matches MapPoints from the current KeyFrame with the previous ones and checks for duplicates

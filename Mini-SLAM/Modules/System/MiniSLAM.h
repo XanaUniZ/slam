@@ -39,6 +39,7 @@
 #include "sophus/se3.hpp"
 
 #include <opencv2/opencv.hpp>
+#include "DatasetLoader/EurocVisualLoader.h"
 
 class MiniSLAM {
 public:
@@ -52,7 +53,7 @@ public:
     /*
      * Process an image. Computes in Tcw the camera pose of the image
      */
-    bool processImage(const cv::Mat& im, Sophus::SE3f& Tcw);
+    bool processImage(const cv::Mat &im, Sophus::SE3f& Tcw, double ts, trackingResult* trackingRes);
 
     void runGlobalBundleAdjustment();
 

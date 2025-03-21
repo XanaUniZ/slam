@@ -43,7 +43,8 @@
  int main()
  {
    vector<vector<cv::Mat > > features;
-   string folderPath = "Datasets/V102_small";
+  //  string folderPath = "Datasets/V102_small";
+   string folderPath = "Datasets/V102_tiny";
    int nImages = loadFeatures(features, folderPath);
  
    wait();
@@ -133,10 +134,13 @@
    // load the vocabulary from disk
    std::cout << "Opening Vocab" << std::endl;
   //  OrbVocabulary voc("ORBvoc.txt"); // XAVI: use this
-   OrbVocabulary voc("small_voc.yml.gz");
+  //  OrbVocabulary voc("ORBvoc.txt.tar.gz"); // XAVI: use this
+   OrbVocabulary* voc = new OrbVocabulary();
+   voc->loadFromTextFile("ORBvoc.txt"); // XAVI: use this
+  //  OrbVocabulary voc("small_voc.yml.gz");
    
    std::cout << "Creating DB" << std::endl;
-   OrbDatabase db(voc, false, 0); // false = do not use direct index
+   OrbDatabase db(*voc, false, 0); // false = do not use direct index
    // (so ignore the last param)
    // The direct index is useful if we want to retrieve the features that 
    // belong to some vocabulary node.

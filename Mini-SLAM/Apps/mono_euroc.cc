@@ -23,6 +23,7 @@
 
 #include "DatasetLoader/EurocVisualLoader.h"
 #include "System/MiniSLAM.h"
+#include "Tracking/Tracking.h"
 
 #include <opencv2/opencv.hpp>
 
@@ -55,12 +56,13 @@ int main(int argc, char **argv){
     //Process the sequence
     cv::Mat currIm;
     double currTs;
-    for(int i = 150; i < sequence.getLenght(); i++){
+    trackingResult trackRes;
+    for(int i = 200; i < sequence.getLenght(); i++){
         sequence.getLeftImage(i,currIm);
         sequence.getTimeStamp(i,currTs);
 
         Sophus::SE3f Tcw;
-        if(SLAM.processImage(currIm, Tcw)){
+        if(SLAM.processImage(currIm, Tcw, currTs, &trackRes)){
             Sophus::SE3f Twc = Tcw.inverse();
             //Save predicted pose to the file
             trajectoryFile << setprecision(17) << currTs*1e9 << "," << setprecision(7) << Twc.translation()(0) << ",";
@@ -68,6 +70,18 @@ int main(int argc, char **argv){
             trajectoryFile << Twc.unit_quaternion().x() << "," << Twc.unit_quaternion().y() << ",";
             trajectoryFile << Twc.unit_quaternion().z() << "," << Twc.unit_quaternion().w() << endl;
         }
+        std::cout << "\033[1;32mNumber of KeyFrames: \033[0m" << trackRes.nKeyframes << std::endl;
+        std::cout << "\033[1;32mNumber of MapPoints: \033[0m" << trackRes.nMapPoints << std::endl;
+        
+        if (trackRes.isKF){
+            std:: cout << "IS KEYFRAMEE!!!\n" ;
+            std::cout << "\033[1;31mRemoved Behind: \033[0m" << setprecision(4) << (static_cast<double>(trackRes.pointsBehind)/static_cast<double>(trackRes.totalPoints)) * 100. << std::endl;
+            std::cout << "\033[1;31mRemoved High Error: \033[0m" << setprecision(4) << (static_cast<double>(trackRes.highError)/static_cast<double>(trackRes.totalPoints)) * 100. << std::endl;
+            std::cout << "\033[1;31mRemoved Low Par: \033[0m" << setprecision(4) << (static_cast<double>(trackRes.lowParallax)/static_cast<double>(trackRes.totalPoints)) * 100. << std::endl;
+            std::cout << "\033[1;31mAdded: \033[0m" << setprecision(4) << (static_cast<double>(trackRes.nTriangulated)/static_cast<double>(trackRes.totalPoints)) * 100. << std::endl;
+            std::cout << "\033[1;31mCulled: \033[0m" << setprecision(4) << trackRes.culledPoints << std::endl;
+        } 
+        resetTrackingRes(&trackRes);
     }
 
     trajectoryFile.close();

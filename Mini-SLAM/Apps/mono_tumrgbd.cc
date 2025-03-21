@@ -54,12 +54,13 @@ int main(int argc, char **argv){
     //Process the sequence
     cv::Mat currIm;
     double currTs;
+    trackingResult trackRes;
     for(int i = 0; i < sequence.getLenght(); i++){
         sequence.getRGBImage(i,currIm);
         sequence.getTimeStamp(i,currTs);
 
         Sophus::SE3f Tcw;
-        if(SLAM.processImage(currIm, Tcw)){
+        if(SLAM.processImage(currIm, Tcw, currTs, &trackRes)){
             Sophus::SE3f Twc = Tcw.inverse();
             //Save predicted pose to the file
             trajectoryFile << setprecision(17) << currTs << "," << setprecision(7) << Twc.translation()(0) << ",";
