@@ -34,6 +34,8 @@
   #include <opencv2/features2d.hpp>
   #include <experimental/filesystem> 
 
+
+
 using namespace std;
 using namespace DBoW2;
 
@@ -796,5 +798,48 @@ void resetTrackingRes(trackingResult* res){
     res->totalPoints = 0;
     res->isKF = false;
     res->culledPoints = 0;
+
+    res->pctPointsBehind = 0;
+    res->pcthighError = 0;
+    res->pctlowParallax = 0;
+    res->pctnTriangulated = 0;
+
     return;
 } 
+
+void initTrackingRes(trackingResult* res){
+    res->nFrames = 0;
+    res->nKeyframes = 0;
+    res->nMapPoints = 0;
+
+    res->pointsBehind = 0;
+    res->highError = 0;
+    res->lowParallax = 0;
+    res->nTriangulated = 0;
+    res->totalPoints = 0;
+    res->isKF = false;
+    res->culledPoints = 0;
+
+    res->pctPointsBehind = 0;
+    res->pcthighError = 0;
+    res->pctlowParallax = 0;
+    res->pctnTriangulated = 0;
+
+    return;
+} 
+
+void printTrackingRes(trackingResult& trackRes){
+    std::cout << "\033[1;32mNumber of KeyFrames: \033[0m" << trackRes.nKeyframes << std::endl;
+    std::cout << "\033[1;32mNumber of MapPoints: \033[0m" << trackRes.nMapPoints << std::endl;
+    
+    if (trackRes.isKF){
+        std:: cout << "IS KEYFRAMEE!!!\n" ;
+        std::cout << "\033[1;31mRemoved Behind: \033[0m" << setprecision(4) << trackRes.pctPointsBehind << std::endl;
+        std::cout << "\033[1;31mRemoved High Error: \033[0m" << setprecision(4) << trackRes.pcthighError << std::endl;
+        std::cout << "\033[1;31mRemoved Low Par: \033[0m" << setprecision(4) << trackRes.pctlowParallax << std::endl;
+        std::cout << "\033[1;31mAdded: \033[0m" << setprecision(4) << trackRes.pctnTriangulated << std::endl;
+        std::cout << "\033[1;31mCulled: \033[0m" << setprecision(4) << trackRes.culledPoints << std::endl;
+    }
+    return;
+} 
+

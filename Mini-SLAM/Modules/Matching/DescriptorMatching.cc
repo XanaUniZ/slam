@@ -49,6 +49,10 @@ int searchForInitializaion(Frame& refFrame, Frame& currFrame, int th, vector<int
     cv::Mat refDesc = refFrame.getDescriptors();
     cv::Mat currDesc = currFrame.getDescriptors();
 
+    // Track the best reference keypoint index and distance for each current keypoint
+    vector<int> currMatchedRefIdx(currDesc.rows, -1);
+    vector<int> currMatchedDistance(currDesc.rows, INT_MAX);
+
     int nMatches = 0;
     const int minOctave = 0, maxOctave = 0; //Only search matches in the original image
     for(size_t i = 0; i < vRefKeys.size(); i++){
@@ -86,9 +90,32 @@ int searchForInitializaion(Frame& refFrame, Frame& currFrame, int th, vector<int
                 secondBestDist = dist;
             }
         }
+
         if(bestDist <= th && (float)bestDist < (float(secondBestDist)*0.9)){
-            vMatches[i] = bestIdx;
-            nMatches++;
+            int currentKpIdx = bestIdx;
+        
+            if(currMatchedRefIdx[currentKpIdx] == -1){
+                // Current keypoint not matched yet, assign this match
+                vMatches[i] = currentKpIdx;
+                currMatchedRefIdx[currentKpIdx] = i;
+                currMatchedDistance[currentKpIdx] = bestDist;
+                nMatches++;
+            } else {
+                // Check if this match is better than the existing one
+                int existingRefIdx = currMatchedRefIdx[currentKpIdx];
+                int existingDist = currMatchedDistance[currentKpIdx];
+        
+                if(bestDist < existingDist){
+                    // Replace the existing match with the new one
+                    vMatches[existingRefIdx] = -1; // Invalidate previous match
+                    nMatches--;
+        
+                    vMatches[i] = currentKpIdx; // Assign new match
+                    currMatchedRefIdx[currentKpIdx] = i;
+                    currMatchedDistance[currentKpIdx] = bestDist;
+                    nMatches++;
+                }
+            }
         }
     }
 

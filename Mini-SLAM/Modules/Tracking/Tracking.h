@@ -46,10 +46,15 @@
 
 // DBoW2
 #include <DBoW2/DBoW2.h> // defines OrbVocabulary and OrbDatabase
+
+  #include <numeric> // For std::accumulate
+  #include <cmath>
+
 using namespace DBoW2;
 
 struct trackingResult {
     long nKeyframes;
+    long nFrames;
     long nMapPoints;
     long pointsBehind;
     long highError;
@@ -58,9 +63,37 @@ struct trackingResult {
     long totalPoints;
     bool isKF;
     long culledPoints;
+
+    double pctPointsBehind;
+    double pcthighError;
+    double pctlowParallax;
+    double pctnTriangulated;
 };
 
+void printTrackingRes(trackingResult& trackRes);
 void resetTrackingRes(trackingResult* res);
+void initTrackingRes(trackingResult* res);
+template <typename T> 
+T calculateMean(const std::vector<T>& data) {
+    if (data.empty()) {
+        return 0.0; // Handle empty vector case
+    }
+    return std::accumulate(data.begin(), data.end(), 0.0) / data.size();
+}
+
+template <typename T> 
+T calculateStdev(const std::vector<T>& data) {
+    if (data.size() <= 1) {
+        return 0.0; // Not enough data points for sample standard deviation
+    }
+    double mean = calculateMean(data);
+    auto computeSquaredDiff = [mean](double sum, double x) {
+        return sum + (x - mean) * (x - mean);
+    };
+    double sumSquaredDiff = std::accumulate(data.begin(), data.end(), 0.0, computeSquaredDiff);
+    double variance = sumSquaredDiff / (data.size() - 1); // Sample variance
+    return std::sqrt(variance);
+}
 
 class Tracking {
 public:

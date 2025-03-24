@@ -45,8 +45,8 @@ void Map::removeMapPoint(ID id) {
         ID kfId = pair.first;
         size_t idx = pair.second;
 
-        std::cout << "kfId " << kfId << std::endl;
-        std::cout << "idx " << idx << std::endl;
+        // std::cout << "kfId " << kfId << std::endl;
+        // std::cout << "idx " << idx << std::endl;
         this->removeObservation(kfId,id);
         mKeyFrames_[kfId]->setMapPoint(idx, nullptr);
     }

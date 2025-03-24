@@ -57,12 +57,18 @@ int main(int argc, char **argv){
     cv::Mat currIm;
     double currTs;
     trackingResult trackRes;
+    initTrackingRes(&trackRes);
+    
+    std::vector<double> behindVect, errorVect, parallaxVect, triangVect;
+    std::vector<long> culledVect; 
+
     for(int i = 200; i < sequence.getLenght(); i++){
         sequence.getLeftImage(i,currIm);
         sequence.getTimeStamp(i,currTs);
 
         Sophus::SE3f Tcw;
         if(SLAM.processImage(currIm, Tcw, currTs, &trackRes)){
+            trackRes.nFrames += 1;
             Sophus::SE3f Twc = Tcw.inverse();
             //Save predicted pose to the file
             trajectoryFile << setprecision(17) << currTs*1e9 << "," << setprecision(7) << Twc.translation()(0) << ",";
@@ -70,18 +76,25 @@ int main(int argc, char **argv){
             trajectoryFile << Twc.unit_quaternion().x() << "," << Twc.unit_quaternion().y() << ",";
             trajectoryFile << Twc.unit_quaternion().z() << "," << Twc.unit_quaternion().w() << endl;
         }
+        // printTrackingRes(trackRes); 
+        std::cout << "\033[1;32mNumber of Frames: \033[0m" << trackRes.nFrames << std::endl;
         std::cout << "\033[1;32mNumber of KeyFrames: \033[0m" << trackRes.nKeyframes << std::endl;
         std::cout << "\033[1;32mNumber of MapPoints: \033[0m" << trackRes.nMapPoints << std::endl;
-        
         if (trackRes.isKF){
-            std:: cout << "IS KEYFRAMEE!!!\n" ;
-            std::cout << "\033[1;31mRemoved Behind: \033[0m" << setprecision(4) << (static_cast<double>(trackRes.pointsBehind)/static_cast<double>(trackRes.totalPoints)) * 100. << std::endl;
-            std::cout << "\033[1;31mRemoved High Error: \033[0m" << setprecision(4) << (static_cast<double>(trackRes.highError)/static_cast<double>(trackRes.totalPoints)) * 100. << std::endl;
-            std::cout << "\033[1;31mRemoved Low Par: \033[0m" << setprecision(4) << (static_cast<double>(trackRes.lowParallax)/static_cast<double>(trackRes.totalPoints)) * 100. << std::endl;
-            std::cout << "\033[1;31mAdded: \033[0m" << setprecision(4) << (static_cast<double>(trackRes.nTriangulated)/static_cast<double>(trackRes.totalPoints)) * 100. << std::endl;
-            std::cout << "\033[1;31mCulled: \033[0m" << setprecision(4) << trackRes.culledPoints << std::endl;
-        } 
-        resetTrackingRes(&trackRes);
+            behindVect.push_back(trackRes.pctPointsBehind);
+            errorVect.push_back(trackRes.pcthighError);
+            parallaxVect.push_back(trackRes.pctlowParallax);
+            triangVect.push_back(trackRes.pctnTriangulated);
+            culledVect.push_back(trackRes.culledPoints);
+
+            resetTrackingRes(&trackRes);
+
+            std::cout << "\033[1;31mRemoved Behind-> \033[0m" << "\033[1;31mMean: \033[0m" << setprecision(4) << calculateMean(behindVect) << "\033[1;31m Std: \033[0m" << setprecision(4) << calculateStdev(behindVect) << std::endl;
+            std::cout << "\033[1;31mRemoved High Error-> \033[0m" << "\033[1;31mMean: \033[0m" << setprecision(4) << calculateMean(errorVect) << "\033[1;31m Std: \033[0m" << setprecision(4) << calculateStdev(errorVect) << std::endl;
+            std::cout << "\033[1;31mRemoved Low Par-> \033[0m" << "\033[1;31mMean: \033[0m" << setprecision(4) << calculateMean(parallaxVect) << "\033[1;31m Std: \033[0m" << setprecision(4) << calculateStdev(parallaxVect) << std::endl;
+            std::cout << "\033[1;31mRemoved Added-> \033[0m" << "\033[1;31mMean: \033[0m" << setprecision(4) << calculateMean(triangVect) << "\033[1;31m Std: \033[0m" << setprecision(4) << calculateStdev(triangVect) << std::endl;
+            std::cout << "\033[1;31mCulled-> \033[0m" << "\033[1;31mMean: \033[0m" << setprecision(4) << calculateMean(culledVect) << "\033[1;31m Std: \033[0m" << setprecision(4) << calculateStdev(culledVect) << std::endl;
+        }
     }
 
     trajectoryFile.close();

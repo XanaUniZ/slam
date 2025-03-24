@@ -56,16 +56,14 @@ void LocalMapping::mapPointCulling(trackingResult* trackingRes) {
      * Your code for Lab 4 - Task 4 here!
      */
     // return;
-    int min_n_obs = 2;
+    int min_n_obs = 3;
     int min_n_keyframes = 5;
 
     int n_keyframes = pMap_->getKeyFrames().size();
-
-    long removed_points = 0;
+    std::unordered_set<ID> points_to_remove;
 
     if (n_keyframes > min_n_keyframes){
         auto vMapPoints = pMap_->getMapPoints(); // Use reference to avoid copies
-        std::unordered_set<ID> points_to_remove;
 
         // Iterate using range-based for loop
         for (auto pair : vMapPoints) {
@@ -79,18 +77,18 @@ void LocalMapping::mapPointCulling(trackingResult* trackingRes) {
                 // std::cout << "Inside removeMapPoint " << std::endl;
                 // std::cout << "pMP->getId() " << pMP->getId() << std::endl;
                 points_to_remove.insert(pMP->getId());
-                std::cout << "HII!!!!!\n";
+                // std::cout << "HII!!!!!\n";
             }
         }
 
-        removed_points = static_cast<double>(points_to_remove.size()) / static_cast<double>(vMapPoints.size());
+        static_cast<double>(vMapPoints.size());
         for (ID point : points_to_remove) {
             pMap_->removeMapPoint(point);
         }
         
     }
 
-    trackingRes->culledPoints = removed_points;
+    trackingRes->culledPoints = points_to_remove.size();
 }
 
 void LocalMapping::triangulateNewMapPoints(trackingResult* trackingRes) {
@@ -217,6 +215,11 @@ void LocalMapping::triangulateNewMapPoints(trackingResult* trackingRes) {
     trackingRes->lowParallax += lowParallax;
     trackingRes->nTriangulated += nTriangulated;
     trackingRes->totalPoints += totalPoints;
+
+    trackingRes->pctPointsBehind = (static_cast<double>(pointsBehind)/static_cast<double>(totalPoints)) * 100.;
+    trackingRes->pcthighError = (static_cast<double>(highError)/static_cast<double>(totalPoints)) * 100.;
+    trackingRes->pctlowParallax = (static_cast<double>(lowParallax)/static_cast<double>(totalPoints)) * 100.;
+    trackingRes->pctnTriangulated = (static_cast<double>(nTriangulated)/static_cast<double>(totalPoints)) * 100.;
 }
 
 void LocalMapping::checkDuplicatedMapPoints() {
