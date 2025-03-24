@@ -174,9 +174,11 @@ void LocalMapping::triangulateNewMapPoints(trackingResult* trackingRes) {
                 cv::Point2f uv1 = calibration1->project(p3D_c1);
                 cv::Point2f uv2 = calibration2->project(p3D_c2);
                 cv::Point2f kp1Copy = kp1.pt;
-                cv::Point2f kp2Copy = kp1.pt;
-                float repError_c1 = squaredReprojectionError(kp1Copy,uv1) > min_reprError;
-                float repError_c2 = squaredReprojectionError(kp2Copy,uv2) > min_reprError;
+                cv::Point2f kp2Copy = kp2.pt;
+                float repError_c1 = squaredReprojectionError(kp1Copy,uv1);
+                float repError_c2 = squaredReprojectionError(kp2Copy,uv2);
+                // std::cout << "repError_c1  =  " << repError_c1 << std::endl;
+                // std::cout << "repError_c2  =  " << repError_c2 << std::endl;
                 if((repError_c1 > min_reprError) || (repError_c2 > min_reprError))
                 {
                     highError += 1;
