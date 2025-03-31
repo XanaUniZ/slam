@@ -276,7 +276,6 @@ bool Tracking::doTracking(const cv::Mat &im, Sophus::SE3f &Tcw, double ts, track
             status_ = GOOD;
             return true;
         }
-        cv::waitKey(0);
         std::cout << "WARNING: FAILED RELOCALIZATION" << std::endl;
         status_ = LOST;
         return false;
@@ -497,6 +496,21 @@ bool Tracking::relocalize(){
             currFrame_.checkAllMapPointsAreGood();
             mapVisualizer_->updateCurrentPose(Tcw);
             // std::cout << "PnP succeed!" << std::endl;
+
+            // Extract translation vector
+            Eigen::Vector3f t = Tcw.translation();
+
+            // Extract rotation as quaternion (w, x, y, z order)
+            Eigen::Quaternionf q = Tcw.so3().unit_quaternion();
+
+            // Print results
+            // Configure output formatting
+            std::cout << std::fixed << std::setprecision(5);
+            std::cout << "Translation vector: \n" << t.transpose() << std::endl;
+            std::cout << "Quaternion (w, x, y, z): \n"
+              << q.w() << ", " << q.x() << ", " << q.y() << ", " << q.z() << std::endl;
+              // Wait for a key press
+            cv::waitKey(0);
             return true; // Exit loop after successful relocalization
         }
     }

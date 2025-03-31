@@ -62,7 +62,8 @@ int main(int argc, char **argv){
     std::vector<double> behindVect, errorVect, parallaxVect, triangVect;
     std::vector<long> culledVect; 
 
-    for(int i = 200; i < sequence.getLenght(); i++){
+    // for(int i = 200; i < sequence.getLenght(); i++){
+    for(int i = 500; i < sequence.getLenght(); i++){
         sequence.getLeftImage(i,currIm);
         sequence.getTimeStamp(i,currTs);
 
