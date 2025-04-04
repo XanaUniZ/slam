@@ -189,7 +189,7 @@ void LocalMapping::triangulateNewMapPoints(trackingResult* trackingRes) {
                 Eigen::Vector3f normal1 = p3D_c1;
                 Eigen::Vector3f normal2 = p3D_c1 - (T21.inverse().translation());
                 float cosParallaxPoint = cosRayParallax(normal1,normal2);
-                if(cosParallaxPoint < minParallaxCos)
+                if(cosParallaxPoint > minParallaxCos)
                 {
                     lowParallax += 1;
                     continue;  // Reprojection error too large

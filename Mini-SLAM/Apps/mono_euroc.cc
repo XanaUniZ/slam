@@ -24,6 +24,7 @@
 #include "DatasetLoader/EurocVisualLoader.h"
 #include "System/MiniSLAM.h"
 #include "Tracking/Tracking.h"
+  #include <opencv2/core.hpp>
 
 #include <opencv2/opencv.hpp>
 
@@ -62,8 +63,8 @@ int main(int argc, char **argv){
     std::vector<double> behindVect, errorVect, parallaxVect, triangVect;
     std::vector<long> culledVect; 
 
-    // for(int i = 200; i < sequence.getLenght(); i++){
-    for(int i = 500; i < sequence.getLenght(); i++){
+    for(int i = 200; i < sequence.getLenght(); i++){
+    // for(int i = 500; i < sequence.getLenght(); i++){
         sequence.getLeftImage(i,currIm);
         sequence.getTimeStamp(i,currTs);
 
@@ -99,6 +100,7 @@ int main(int argc, char **argv){
     }
 
     trajectoryFile.close();
+    cv::waitKey(0);
 
     return 0;
 }

@@ -259,11 +259,13 @@ bool Tracking::doTracking(const cv::Mat &im, Sophus::SE3f &Tcw, double ts, track
         std::cout << "ENTERING RELOCALIZATION" << std::endl;
 
         bool relocSuccess = relocalize();
-
+        // trackLocalMap();
+        // if (relocSuccess  ) {
         if (relocSuccess && trackLocalMap()) {
             // Promote to KeyFrame and update visualization
             // std::cout << "Before KeyFRame promotion" << std::endl;
             promoteCurrentFrameToKeyFrame();
+            localBundleAdjustment(pMap_.get(), pLastKeyFrame_->getId());
             trackRes->isKF = true;
             // std::cout << "KeyFRame promotion done!" << std::endl;
             updateMotionModel();
@@ -272,7 +274,7 @@ bool Tracking::doTracking(const cv::Mat &im, Sophus::SE3f &Tcw, double ts, track
             // std::cout << "drawCurrentFrame done!" << std::endl;
 
 
-            cv::waitKey(0);
+            // cv::waitKey(0);
             status_ = GOOD;
             return true;
         }
@@ -374,7 +376,7 @@ bool Tracking::relocalize(){
             << candidateKF->getId() << ".png";  // Added parentheses for method call
 
         // Wait for a key press
-        cv::waitKey(0);
+        // cv::waitKey(0);
 
         //////////////////////////////////////////////////////////////////////////////
         // NNDR Matching
@@ -456,7 +458,7 @@ bool Tracking::relocalize(){
         // Check if PnP was successful with enough inliers
         std::cout << "pnpSuccess: " << pnpSuccess << std::endl;
         std::cout << "inliers.rows: " << inliers.rows << std::endl;
-        if (pnpSuccess && inliers.rows >= 5) {
+        if (pnpSuccess && inliers.rows >= 50) {
             std::cout << "PnP Succesful!" << std::endl;
             // SET THE POSE
             // Convert rotation vector to matrix and create Sophus pose
@@ -492,7 +494,9 @@ bool Tracking::relocalize(){
                 }
             }
             
+            // poseOnlyOptimization(currFrame_);
             // FINAL COMPROBATIONS & VIZ
+            Tcw = currFrame_.getPose();
             currFrame_.checkAllMapPointsAreGood();
             mapVisualizer_->updateCurrentPose(Tcw);
             // std::cout << "PnP succeed!" << std::endl;
@@ -510,7 +514,7 @@ bool Tracking::relocalize(){
             std::cout << "Quaternion (w, x, y, z): \n"
               << q.w() << ", " << q.x() << ", " << q.y() << ", " << q.z() << std::endl;
               // Wait for a key press
-            cv::waitKey(0);
+            // cv::waitKey(0);
             return true; // Exit loop after successful relocalization
         }
     }

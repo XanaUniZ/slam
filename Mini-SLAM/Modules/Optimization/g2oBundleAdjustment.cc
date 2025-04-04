@@ -201,7 +201,7 @@ int poseOnlyOptimization(Frame& currFrame){
             if(!e)
                 continue;
 
-            if(!vInlier[i])
+            if(!vInlier[j])
                 e->computeError();
 
             const float chi2 = e->chi2();
